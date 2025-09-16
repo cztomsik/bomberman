@@ -7,8 +7,6 @@ const GameState = {
         bombs: [],
         explosions: [],
         powerups: [],
-        time: 0,
-        paused: false,
         winner: null
     },
     
@@ -19,60 +17,11 @@ const GameState = {
         actions: []
     },
     
-    settings: {
-        boardWidth: 15,
-        boardHeight: 13,
-        playerCount: 2,
-        cpuCount: 0,
-        cpuDifficulty: 'medium',
-        timeLimit: 180,
-        soundEnabled: true,
-        theme: 'default'
-    },
-    
-    stats: {
-        gamesPlayed: 0,
-        wins: 0,
-        losses: 0,
-        draws: 0,
-        totalPlayTime: 0,
-        powerupsCollected: 0
-    },
+    boardWidth: 15,
+    boardHeight: 13,
     
     init() {
-        this.loadSettings();
-        this.loadStats();
         this.resetGame();
-    },
-    
-    loadSettings() {
-        const saved = localStorage.getItem('bomberman-settings');
-        if (saved) {
-            try {
-                Object.assign(this.settings, JSON.parse(saved));
-            } catch (e) {
-                console.warn('Failed to load settings:', e);
-            }
-        }
-    },
-    
-    saveSettings() {
-        localStorage.setItem('bomberman-settings', JSON.stringify(this.settings));
-    },
-    
-    loadStats() {
-        const saved = localStorage.getItem('bomberman-stats');
-        if (saved) {
-            try {
-                Object.assign(this.stats, JSON.parse(saved));
-            } catch (e) {
-                console.warn('Failed to load stats:', e);
-            }
-        }
-    },
-    
-    saveStats() {
-        localStorage.setItem('bomberman-stats', JSON.stringify(this.stats));
     },
     
     resetGame() {
@@ -82,8 +31,6 @@ const GameState = {
             bombs: [],
             explosions: [],
             powerups: [],
-            time: 0,
-            paused: false,
             winner: null
         };
         
@@ -93,7 +40,7 @@ const GameState = {
     
     createBoard() {
         const board = [];
-        const { boardWidth, boardHeight } = this.settings;
+        const { boardWidth, boardHeight } = this;
         
         for (let y = 0; y < boardHeight; y++) {
             board[y] = [];
@@ -209,7 +156,7 @@ const GameState = {
     },
     
     isWalkable(x, y) {
-        if (x < 0 || x >= this.settings.boardWidth || y < 0 || y >= this.settings.boardHeight) {
+        if (x < 0 || x >= this.boardWidth || y < 0 || y >= this.boardHeight) {
             return false;
         }
         

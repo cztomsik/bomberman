@@ -21,7 +21,7 @@ class BombermanGame {
         this.player = GameState.createPlayer(0, 1, 1, true);
         
         // Set up the board grid
-        this.boardElement.style.gridTemplateColumns = `repeat(${GameState.settings.boardWidth}, 1fr)`;
+        this.boardElement.style.gridTemplateColumns = `repeat(${GameState.boardWidth}, 1fr)`;
         
         // Set up input handlers
         this.setupInput();
@@ -134,8 +134,8 @@ class BombermanGame {
                 const y = bomb.y + dir.dy * i;
                 
                 // Check bounds
-                if (x < 0 || x >= GameState.settings.boardWidth || 
-                    y < 0 || y >= GameState.settings.boardHeight) {
+                if (x < 0 || x >= GameState.boardWidth || 
+                    y < 0 || y >= GameState.boardHeight) {
                     break;
                 }
                 
@@ -232,8 +232,8 @@ class BombermanGame {
     }
     
     render() {
-        const { boardWidth, boardHeight } = GameState.settings;
-        const { board, bombs, explosions, powerups } = GameState.game;
+        const { boardWidth, boardHeight } = GameState;
+        const { board, explosions, powerups } = GameState.game;
         
         let html = '';
         
