@@ -3,7 +3,7 @@ const GameState = {
     
     game: {
         board: [],
-        entities: [],
+        players: [],
         bombs: [],
         explosions: [],
         powerups: [],
@@ -27,7 +27,7 @@ const GameState = {
     resetGame() {
         this.game = {
             board: this.createBoard(),
-            entities: [],
+            players: [],
             bombs: [],
             explosions: [],
             powerups: [],
@@ -85,7 +85,7 @@ const GameState = {
             action: null
         };
         
-        this.game.entities.push(player);
+        this.game.players.push(player);
         this.players.push(player);
         return player;
     },
@@ -144,7 +144,7 @@ const GameState = {
     },
     
     getEntityAt(x, y) {
-        return this.game.entities.find(e => e.alive && Math.floor(e.x) === x && Math.floor(e.y) === y);
+        return this.game.players.find(e => e.alive && Math.floor(e.x) === x && Math.floor(e.y) === y);
     },
     
     getPowerupAt(x, y) {
