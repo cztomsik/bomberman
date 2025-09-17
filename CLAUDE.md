@@ -12,34 +12,32 @@ Since this is a vanilla JavaScript project, no build tools are required:
 
 - **Run the game**: Open `index.html` in a web browser or use a local server
 - **Local development**: Use any static file server (e.g., `python -m http.server 8000`)
-- **No tests**: This project currently has no automated test suite
+- **Run tests**: `npm test` - Uses Node.js built-in test runner
 
 ## Architecture Overview
 
 ### Core Architecture Pattern
-The project uses a **screen-based state machine** architecture with a centralized state manager:
+The project uses a **class-based architecture** with clear separation of concerns:
 
-- **main.js**: Main application controller that manages screen transitions
-- **state.js**: Global state manager (GameState) that handles all game data, settings, and persistence
+- **main.js**: UI layer that handles DOM rendering, input events, and browser-specific concerns
+- **game.js**: Game engine class that contains all game logic, state, and mechanics
 - **Screen modules**: Each screen (menu, game, settings) has its own module that renders UI and handles events
 
 ### Key Architectural Components
 
-1. **State Management** (`state.js`):
-   - Single source of truth for all game state
-   - Handles localStorage persistence for settings and stats
-   - Manages game board, players, bombs, explosions, and powerups
-   - Provides helper methods for game logic (isWalkable, getBombAt, etc.)
+1. **Game Engine** (`game.js`):
+   - `Game` class that can be instantiated for isolated game instances
+   - Contains all game state (board, players, bombs, explosions, powerups)
+   - Handles all game logic (movement, explosions, collisions, powerups)
+   - Provides main `update(deltaTime)` method for game loop
+   - Pure game engine that can run headless (no DOM dependencies)
 
-2. **Game Systems** (`game.js`):
-   - Entity Component System (ECS) pattern with separate systems:
-   - `inputSystem`: Processes player input
-   - `aiSystem`: Controls CPU players
-   - `movementSystem`: Handles player movement
-   - `bombSystem`: Manages bomb timers and explosions
-   - `collisionSystem`: Detects player-explosion collisions
-   - `powerupSystem`: Handles powerup collection
-   - `gameLogicSystem`: Manages win conditions and game flow
+2. **UI Layer** (`main.js`):
+   - `BombermanGame` class that manages DOM and user interface
+   - Creates and owns a `Game` instance
+   - Handles keyboard input and translates to game actions
+   - Renders game state to DOM using emojis
+   - Manages game loop coordination
 
 3. **Screen System**:
    - Each screen is a separate module that exports init/cleanup functions
@@ -51,19 +49,18 @@ The project uses a **screen-based state machine** architecture with a centralize
    - Three difficulty levels with different reaction times and strategy complexity
 
 ### Data Flow
-1. User input → GameState.input.actions
-2. Game systems process state changes each frame
-3. UI screens watch GameState.screen for transitions
-4. All game data persists to localStorage automatically
+1. User input → `BombermanGame` input handlers
+2. Input translated to game actions → `Game` instance methods
+3. `Game.update(deltaTime)` processes all game logic each frame
+4. `BombermanGame.render()` displays current game state in DOM
 
 ## File Structure & Responsibilities
 
 ### Core Files
-- `main.js`: Application lifecycle, screen management
-- `state.js`: Centralized state management and persistence
-- `game.js`: Core game engine with ECS systems
-- `loop.js`: Game loop and timing
-- `cpu.js`: AI opponent logic
+- `main.js`: UI layer, DOM rendering, input handling, game loop coordination
+- `game.js`: Game engine class with all game logic and state
+- `cpu.js`: AI opponent logic (if implemented)
+- `tests/`: Unit tests for game logic using Node.js test runner
 
 ### UI Screens
 Each screen is implemented as a separate module that exports `init` and optionally `render` functions following a consistent pattern:
@@ -83,7 +80,7 @@ Each screen is implemented as a separate module that exports `init` and optional
 ## Key Implementation Details
 
 ### Game Board System
-- Uses a 2D array (`GameState.game.board`) for the grid
+- Uses a 2D array (`game.game.board`) for the grid
 - Coordinates are (x, y) with (0,0) at top-left
 - Cell types: `null` (empty), `'wall'`, `'crate'`, `'bomb'`
 - Board generation creates classic Bomberman layout with player spawn areas
@@ -105,6 +102,15 @@ Each screen is implemented as a separate module that exports `init` and optional
 - Uses simple pathfinding for movement decisions
 - Different difficulty levels affect reaction speed and strategy
 
+## Testing
+
+The project includes comprehensive unit tests covering:
+- **Game Logic**: Movement, bomb mechanics, explosions, collisions
+- **State Management**: Board generation, entity management, game state
+- **String Rendering**: Text-based board representation for testing
+
+Tests use Node.js built-in test runner and can create isolated `Game` instances for testing game logic without DOM dependencies.
+
 ## Common Development Patterns
 
 ### Adding New Screens
@@ -112,7 +118,7 @@ Each screen follows a consistent modular pattern:
 
 1. **Create screen module** (e.g., `new-screen.js`):
    ```javascript
-   import GameState from './state.js';
+   import Game from './game.js';
    
    export function renderNewScreen() {
        return `<div class="new-screen">...</div>`;
@@ -138,18 +144,18 @@ Each screen follows a consistent modular pattern:
 
 4. **Navigate to screen**:
    ```javascript
-   GameState.screen = 'new-screen';
+   game.screen = 'new-screen';
    ```
 
 ### Modifying Game Logic
-- Add new systems to `game.js` systems array
-- Systems receive `(state, deltaTime)` parameters
-- Modify GameState properties directly (no immutability)
+- Add new methods to the `Game` class in `game.js`
+- Game logic methods receive necessary parameters (players, deltaTime, etc.)
+- Call `game.update(deltaTime)` in the main game loop
 
-### State Persistence
-- Settings auto-save via `GameState.saveSettings()`
-- Stats auto-save via `GameState.saveStats()`
-- Use `localStorage` for all persistence
+### Testing Game Logic
+- Create isolated `Game` instances in tests: `const game = new Game(5, 5)`
+- Use `game.renderToString()` to verify game state in tests
+- Test game logic independently of DOM/UI concerns
 
 ### Event Handling
 - Each screen manages its own event listeners
