@@ -18,7 +18,9 @@ const GameState = {
     boardWidth: 15,
     boardHeight: 13,
     
-    init() {
+    init(width = 15, height = 13) {
+        this.boardWidth = width;
+        this.boardHeight = height;
         this.resetGame();
     },
     
@@ -153,6 +155,46 @@ const GameState = {
     
     getPlayerActions(playerId) {
         return this.input.actions.filter(a => a.playerId === playerId);
+    },
+    
+    // String renderer for testing
+    renderToString() {
+        let result = '';
+        for (let y = 0; y < this.boardHeight; y++) {
+            for (let x = 0; x < this.boardWidth; x++) {
+                // Check for player
+                const player = this.getEntityAt(x, y);
+                if (player) {
+                    result += 'P';
+                    continue;
+                }
+                
+                // Check for explosion
+                const explosion = this.game.explosions.find(e => e.x === x && e.y === y);
+                if (explosion) {
+                    result += 'X';
+                    continue;
+                }
+                
+                // Check for powerup
+                const powerup = this.getPowerupAt(x, y);
+                if (powerup) {
+                    result += powerup.type[0].toUpperCase(); // B, P, or S
+                    continue;
+                }
+                
+                // Check board cell
+                const cell = this.game.board[y][x];
+                switch (cell) {
+                    case 'wall': result += '#'; break;
+                    case 'crate': result += '%'; break;
+                    case 'bomb': result += '*'; break;
+                    default: result += '.'; break;
+                }
+            }
+            if (y < this.boardHeight - 1) result += '\n';
+        }
+        return result;
     }
 };
 

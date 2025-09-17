@@ -1,15 +1,19 @@
 import GameState from './state.js';
 
 class BombermanGame {
-    constructor() {
-        this.boardElement = document.getElementById('game-board');
-        this.bombCountElement = document.getElementById('bomb-count');
-        this.bombPowerElement = document.getElementById('bomb-power');
+    constructor(options = {}) {
+        // Allow dependency injection for testing
+        this.boardElement = options.boardElement || (typeof document !== 'undefined' ? document.getElementById('game-board') : null);
+        this.bombCountElement = options.bombCountElement || (typeof document !== 'undefined' ? document.getElementById('bomb-count') : null);
+        this.bombPowerElement = options.bombPowerElement || (typeof document !== 'undefined' ? document.getElementById('bomb-power') : null);
         this.lastTime = 0;
         this.keys = {};
         this.player = null;
         
-        this.init();
+        // Only auto-init if we have DOM elements
+        if (this.boardElement && !options.skipInit) {
+            this.init();
+        }
     }
     
     init() {
@@ -20,14 +24,20 @@ class BombermanGame {
         // Create player at starting position
         this.player = GameState.createPlayer(0, 1, 1, true);
         
-        // Set up the board grid
-        this.boardElement.style.gridTemplateColumns = `repeat(${GameState.boardWidth}, 1fr)`;
+        // Set up the board grid (if DOM element exists)
+        if (this.boardElement) {
+            this.boardElement.style.gridTemplateColumns = `repeat(${GameState.boardWidth}, 1fr)`;
+        }
         
-        // Set up input handlers
-        this.setupInput();
+        // Set up input handlers (if in browser)
+        if (typeof document !== 'undefined') {
+            this.setupInput();
+        }
         
-        // Start game loop
-        this.gameLoop(0);
+        // Start game loop (if in browser)
+        if (typeof requestAnimationFrame !== 'undefined') {
+            this.gameLoop(0);
+        }
     }
     
     setupInput() {
@@ -77,8 +87,8 @@ class BombermanGame {
             // Check if there's a bomb at the new position
             const bomb = GameState.getBombAt(newX, newY);
             
-            // Can only walk on bombs if we're already standing on it (just placed it)
-            if (!bomb || (this.player.x === newX && this.player.y === newY)) {
+            // Can walk if no bomb, or if we're currently standing on this bomb
+            if (!bomb || GameState.getBombAt(this.player.x, this.player.y) === bomb) {
                 this.player.x = newX;
                 this.player.y = newY;
             }
@@ -219,8 +229,12 @@ class BombermanGame {
     }
     
     updateUI() {
-        this.bombCountElement.textContent = this.player.maxBombs;
-        this.bombPowerElement.textContent = this.player.bombPower;
+        if (this.bombCountElement) {
+            this.bombCountElement.textContent = this.player.maxBombs;
+        }
+        if (this.bombPowerElement) {
+            this.bombPowerElement.textContent = this.player.bombPower;
+        }
     }
     
     getCellContent(x, y) {
@@ -252,6 +266,8 @@ class BombermanGame {
     }
     
     render() {
+        if (!this.boardElement) return; // Skip rendering if no DOM element
+        
         const { boardWidth, boardHeight } = GameState;
         let html = '';
         
@@ -285,12 +301,18 @@ class BombermanGame {
         // Render
         this.render();
         
-        // Continue loop
-        requestAnimationFrame((time) => this.gameLoop(time));
+        // Continue loop (if in browser)
+        if (typeof requestAnimationFrame !== 'undefined') {
+            requestAnimationFrame((time) => this.gameLoop(time));
+        }
     }
 }
 
-// Start the game when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    new BombermanGame();
-});
+// Start the game when DOM is loaded (only in browser)
+if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+        new BombermanGame();
+    });
+}
+
+export { BombermanGame };
