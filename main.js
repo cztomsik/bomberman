@@ -69,8 +69,8 @@ class BombermanGame {
     }
     
     movePlayer(dx, dy) {
-        const newX = Math.floor(this.player.x + dx);
-        const newY = Math.floor(this.player.y + dy);
+        const newX = this.player.x + dx;
+        const newY = this.player.y + dy;
         
         // Check if the new position is walkable
         if (GameState.isWalkable(newX, newY)) {
@@ -78,7 +78,7 @@ class BombermanGame {
             const bomb = GameState.getBombAt(newX, newY);
             
             // Can only walk on bombs if we're already standing on it (just placed it)
-            if (!bomb || (Math.floor(this.player.x) === newX && Math.floor(this.player.y) === newY)) {
+            if (!bomb || (this.player.x === newX && this.player.y === newY)) {
                 this.player.x = newX;
                 this.player.y = newY;
             }
@@ -88,8 +88,8 @@ class BombermanGame {
     placeBomb() {
         if (this.player.activeBombs >= this.player.maxBombs) return;
         
-        const x = Math.floor(this.player.x);
-        const y = Math.floor(this.player.y);
+        const x = this.player.x;
+        const y = this.player.y;
         
         // Check if there's already a bomb at this position
         if (GameState.getBombAt(x, y)) return;
@@ -116,22 +116,16 @@ class BombermanGame {
     explodeBomb(bomb) {
         GameState.removeBomb(bomb);
         
-        // Create explosions in cross pattern
-        const directions = [
-            { dx: 0, dy: 0 },  // Center
-            { dx: 1, dy: 0 },  // Right
-            { dx: -1, dy: 0 }, // Left
-            { dx: 0, dy: 1 },  // Down
-            { dx: 0, dy: -1 }  // Up
-        ];
+        // Center explosion
+        GameState.addExplosion(bomb.x, bomb.y);
         
-        for (const dir of directions) {
-            for (let i = 0; i <= bomb.power; i++) {
-                // Skip intermediate positions for center
-                if (dir.dx === 0 && dir.dy === 0 && i > 0) continue;
-                
-                const x = bomb.x + dir.dx * i;
-                const y = bomb.y + dir.dy * i;
+        // Directional explosions
+        const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        
+        for (const [dx, dy] of directions) {
+            for (let i = 1; i <= bomb.power; i++) {
+                const x = bomb.x + dx * i;
+                const y = bomb.y + dy * i;
                 
                 // Check bounds
                 if (x < 0 || x >= GameState.boardWidth || 
@@ -142,9 +136,7 @@ class BombermanGame {
                 const cell = GameState.game.board[y][x];
                 
                 // Stop at walls
-                if (cell === 'wall') {
-                    break;
-                }
+                if (cell === 'wall') break;
                 
                 // Add explosion
                 GameState.addExplosion(x, y);
@@ -188,10 +180,10 @@ class BombermanGame {
     }
     
     checkCollisions() {
-        if (!this.player || !this.player.alive) return;
+        if (!this.player?.alive) return;
         
-        const px = Math.floor(this.player.x);
-        const py = Math.floor(this.player.y);
+        const px = this.player.x;
+        const py = this.player.y;
         
         // Check explosion collisions
         for (const explosion of GameState.game.explosions) {
@@ -231,49 +223,41 @@ class BombermanGame {
         this.bombPowerElement.textContent = this.player.bombPower;
     }
     
+    getCellContent(x, y) {
+        // Check for player at this position
+        if (this.player?.alive && this.player.x === x && this.player.y === y) {
+            return { content: '🤖', className: 'cell' };
+        }
+        
+        // Check for explosion at this position
+        if (GameState.game.explosions.some(e => e.x === x && e.y === y)) {
+            return { content: '💥', className: 'cell' };
+        }
+        
+        // Check for powerup at this position
+        const powerup = GameState.game.powerups.find(p => p.x === x && p.y === y);
+        if (powerup) {
+            const icons = { bomb: '💣', power: '🔥', speed: '👟' };
+            return { content: icons[powerup.type], className: 'cell' };
+        }
+        
+        // Check board cell
+        const cell = GameState.game.board[y][x];
+        switch (cell) {
+            case 'bomb': return { content: '💣', className: 'cell' };
+            case 'wall': return { content: '🧱', className: 'cell wall' };
+            case 'crate': return { content: '📦', className: 'cell crate' };
+            default: return { content: '', className: 'cell' };
+        }
+    }
+    
     render() {
         const { boardWidth, boardHeight } = GameState;
-        const { board, explosions, powerups } = GameState.game;
-        
         let html = '';
         
         for (let y = 0; y < boardHeight; y++) {
             for (let x = 0; x < boardWidth; x++) {
-                let content = '';
-                let className = 'cell';
-                
-                // Check for player at this position
-                const isPlayerHere = this.player && this.player.alive && 
-                    Math.floor(this.player.x) === x && Math.floor(this.player.y) === y;
-                
-                // Check for explosion at this position
-                const explosion = explosions.find(e => e.x === x && e.y === y);
-                
-                // Check for powerup at this position
-                const powerup = powerups.find(p => p.x === x && p.y === y);
-                
-                // Check for bomb at this position (handled via board array)
-                const cell = board[y][x];
-                
-                // Render priority: player > explosion > powerup > bomb > terrain
-                if (isPlayerHere) {
-                    content = '🤖';
-                } else if (explosion) {
-                    content = '💥';
-                } else if (powerup) {
-                    if (powerup.type === 'bomb') content = '💣';
-                    else if (powerup.type === 'power') content = '🔥';
-                    else if (powerup.type === 'speed') content = '👟';
-                } else if (cell === 'bomb') {
-                    content = '💣';
-                } else if (cell === 'wall') {
-                    content = '🧱';
-                    className += ' wall';
-                } else if (cell === 'crate') {
-                    content = '📦';
-                    className += ' crate';
-                }
-                
+                const { content, className } = this.getCellContent(x, y);
                 html += `<div class="${className}">${content}</div>`;
             }
         }

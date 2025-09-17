@@ -10,8 +10,6 @@ const GameState = {
         winner: null
     },
     
-    players: [],
-    
     input: {
         keys: {},
         actions: []
@@ -34,7 +32,6 @@ const GameState = {
             winner: null
         };
         
-        this.players = [];
         this.input.actions = [];
     },
     
@@ -42,26 +39,28 @@ const GameState = {
         const board = [];
         const { boardWidth, boardHeight } = this;
         
+        // Define spawn corners
+        const corners = [
+            [1, 1], [boardWidth - 2, 1],
+            [1, boardHeight - 2], [boardWidth - 2, boardHeight - 2]
+        ];
+        
         for (let y = 0; y < boardHeight; y++) {
             board[y] = [];
             for (let x = 0; x < boardWidth; x++) {
-                if (x === 0 || x === boardWidth - 1 || y === 0 || y === boardHeight - 1) {
+                // Walls
+                if (x === 0 || x === boardWidth - 1 || y === 0 || y === boardHeight - 1 ||
+                    (x % 2 === 0 && y % 2 === 0)) {
                     board[y][x] = 'wall';
-                } else if (x % 2 === 0 && y % 2 === 0) {
-                    board[y][x] = 'wall';
-                } else if ((x === 1 && y === 1) || (x === boardWidth - 2 && y === 1) ||
-                          (x === 1 && y === boardHeight - 2) || (x === boardWidth - 2 && y === boardHeight - 2)) {
-                    board[y][x] = null;
-                } else if ((x === 2 && y === 1) || (x === 1 && y === 2) ||
-                          (x === boardWidth - 3 && y === 1) || (x === boardWidth - 2 && y === 2) ||
-                          (x === 1 && y === boardHeight - 3) || (x === 2 && y === boardHeight - 2) ||
-                          (x === boardWidth - 2 && y === boardHeight - 3) || (x === boardWidth - 3 && y === boardHeight - 2)) {
-                    board[y][x] = null;
-                } else if (Math.random() < 0.7) {
-                    board[y][x] = 'crate';
-                } else {
-                    board[y][x] = null;
+                    continue;
                 }
+                
+                // Clear spawn areas (2-block radius from corners)
+                const nearCorner = corners.some(([cx, cy]) => 
+                    Math.abs(x - cx) + Math.abs(y - cy) <= 1
+                );
+                
+                board[y][x] = nearCorner ? null : (Math.random() < 0.7 ? 'crate' : null);
             }
         }
         
@@ -70,23 +69,12 @@ const GameState = {
     
     createPlayer(id, x, y, isHuman = true) {
         const player = {
-            id,
-            x,
-            y,
-            isHuman,
-            alive: true,
-            speed: 1,
-            bombCount: 1,
-            bombPower: 1,
-            maxBombs: 1,
-            activeBombs: 0,
-            powerups: [],
-            moveTimer: 0,
-            action: null
+            id, x, y, isHuman,
+            alive: true, speed: 1, bombPower: 1,
+            maxBombs: 1, activeBombs: 0, bombCount: 1,
+            powerups: [], moveTimer: 0, action: null
         };
-        
         this.game.players.push(player);
-        this.players.push(player);
         return player;
     },
     
@@ -107,14 +95,11 @@ const GameState = {
     },
     
     removeBomb(bomb) {
-        const index = this.game.bombs.indexOf(bomb);
-        if (index !== -1) {
-            this.game.bombs.splice(index, 1);
-            if (this.game.board[bomb.y][bomb.x] === 'bomb') {
-                this.game.board[bomb.y][bomb.x] = null;
-            }
-            bomb.owner.activeBombs--;
+        this.game.bombs = this.game.bombs.filter(b => b !== bomb);
+        if (this.game.board[bomb.y][bomb.x] === 'bomb') {
+            this.game.board[bomb.y][bomb.x] = null;
         }
+        bomb.owner.activeBombs--;
     },
     
     addExplosion(x, y, duration = 500) {
@@ -124,10 +109,7 @@ const GameState = {
     },
     
     removeExplosion(explosion) {
-        const index = this.game.explosions.indexOf(explosion);
-        if (index !== -1) {
-            this.game.explosions.splice(index, 1);
-        }
+        this.game.explosions = this.game.explosions.filter(e => e !== explosion);
     },
     
     addPowerup(x, y, type) {
@@ -137,10 +119,7 @@ const GameState = {
     },
     
     removePowerup(powerup) {
-        const index = this.game.powerups.indexOf(powerup);
-        if (index !== -1) {
-            this.game.powerups.splice(index, 1);
-        }
+        this.game.powerups = this.game.powerups.filter(p => p !== powerup);
     },
     
     getEntityAt(x, y) {
