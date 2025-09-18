@@ -7,7 +7,7 @@ class BombermanGame {
         this.bombCountElement = options.bombCountElement || (typeof document !== 'undefined' ? document.getElementById('bomb-count') : null);
         this.bombPowerElement = options.bombPowerElement || (typeof document !== 'undefined' ? document.getElementById('bomb-power') : null);
         this.lastTime = 0;
-        this.inputTimer = 0;
+        this.movementTimer = 0;
         this.keys = {};
         this.player = null;
         this.game = null;
@@ -57,28 +57,33 @@ class BombermanGame {
         });
     }
 
-    handleInput() {
+    handleInput(deltaTime) {
         if (!this.player?.alive) return;
-        
-        // Movement
-        let dx = 0, dy = 0;
-        
-        if (this.keys['ArrowUp']) dy = -1;
-        if (this.keys['ArrowDown']) dy = 1;
-        if (this.keys['ArrowLeft']) dx = -1;
-        if (this.keys['ArrowRight']) dx = 1;
-        
-        if (dx !== 0 || dy !== 0) {
-            this.game.movePlayer(this.player, dx, dy);
+
+        // Movement (throttled to prevent too fast movement)
+        if (this.movementTimer <= 0) {
+            let dx = 0, dy = 0;
+
+            if (this.keys['ArrowUp']) dy = -1;
+            if (this.keys['ArrowDown']) dy = 1;
+            if (this.keys['ArrowLeft']) dx = -1;
+            if (this.keys['ArrowRight']) dx = 1;
+
+            if (dx !== 0 || dy !== 0) {
+                this.game.movePlayer(this.player, dx, dy);
+                this.movementTimer = 200 / this.player.speed; // Faster movement with higher speed
+            }
+        } else {
+            this.movementTimer -= deltaTime;
         }
-        
-        // Bomb placement
+
+        // Bomb placement (not throttled - should respond immediately)
         if (this.keys[' '] && !this.keys.spacePressedLastFrame) {
             if (this.game.placeBomb(this.player)) {
                 this.updateUI();
             }
         }
-        
+
         this.keys.spacePressedLastFrame = this.keys[' '];
     }
 
@@ -138,27 +143,22 @@ class BombermanGame {
     gameLoop(currentTime) {
         const deltaTime = currentTime - this.lastTime;
         this.lastTime = currentTime;
-        
-        // Handle input (limit rate to prevent too fast movement)
-        if (this.inputTimer <= 0) {
-            this.handleInput();
-            this.inputTimer = 100; // Milliseconds between input processing
-        } else {
-            this.inputTimer -= deltaTime;
-        }
-        
+
+        // Always handle input to maintain proper state tracking
+        this.handleInput(deltaTime);
+
         // Update game state (all logic is now in GameState)
         this.game.update(deltaTime);
-        
+
         // Check if powerups were collected (update UI)
         if (this.player?.powerups.length > (this.lastPowerupCount || 0)) {
             this.updateUI();
             this.lastPowerupCount = this.player.powerups.length;
         }
-        
+
         // Render
         this.render();
-        
+
         // Continue loop (if in browser)
         if (typeof requestAnimationFrame !== 'undefined') {
             requestAnimationFrame((time) => this.gameLoop(time));
