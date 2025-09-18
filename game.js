@@ -210,6 +210,12 @@ class Game {
         
         // Center explosion
         this.addExplosion(bomb.x, bomb.y);
+
+        // Destroy powerup at bomb center if any
+        const centerPowerup = this.getPowerupAt(bomb.x, bomb.y);
+        if (centerPowerup) {
+            this.removePowerup(centerPowerup);
+        }
         
         // Directional explosions
         const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -232,11 +238,17 @@ class Game {
                 
                 // Add explosion
                 this.addExplosion(x, y);
-                
+
+                // Destroy powerups at this position
+                const powerup = this.getPowerupAt(x, y);
+                if (powerup) {
+                    this.removePowerup(powerup);
+                }
+
                 // Destroy crates
                 if (cell === 'crate') {
                     this.game.board[y][x] = null;
-                    
+
                     // Chance to spawn powerup
                     if (Math.random() < 0.3) {
                         const types = ['bomb', 'power', 'speed'];
