@@ -1,4 +1,5 @@
 import Game from './game.js';
+import AIController from './ai.js';
 
 class BombermanGame {
     constructor(options = {}) {
@@ -11,20 +12,43 @@ class BombermanGame {
         this.keys = {};
         this.player = null;
         this.game = null;
-        
+        this.aiControllers = [];
+
         // Only auto-init if we have DOM elements
         if (this.boardElement && !options.skipInit) {
             this.init();
         }
     }
-    
+
     init() {
         // Create game instance
         this.game = new Game();
-        
-        // Create player at starting position
+
+        // Create human player at starting position (top-left)
         this.player = this.game.createPlayer(0, 1, 1, true);
-        
+        this.player.name = 'Player';
+        this.player.emoji = '😊';
+
+        // Create AI players at other corners
+        const ai1 = this.game.createPlayer(1, this.game.boardWidth - 2, 1, false);
+        ai1.name = 'AI 1';
+        ai1.emoji = '🤖';
+
+        const ai2 = this.game.createPlayer(2, 1, this.game.boardHeight - 2, false);
+        ai2.name = 'AI 2';
+        ai2.emoji = '👾';
+
+        const ai3 = this.game.createPlayer(3, this.game.boardWidth - 2, this.game.boardHeight - 2, false);
+        ai3.name = 'AI 3';
+        ai3.emoji = '🎯';
+
+        // Create AI controllers
+        this.aiControllers = [
+            new AIController(this.game, 1),
+            new AIController(this.game, 2),
+            new AIController(this.game, 3)
+        ];
+
         // Set up the board grid (if DOM element exists)
         if (this.boardElement) {
             this.boardElement.style.gridTemplateColumns = `repeat(${this.game.boardWidth}, 1fr)`;
@@ -96,11 +120,13 @@ class BombermanGame {
     }
 
     getCellContent(x, y) {
-        // Check for player at this position
-        if (this.player?.alive && this.player.x === x && this.player.y === y) {
-            return { content: '🤖', className: 'cell' };
+        // Check for any player at this position
+        for (const player of this.game.players) {
+            if (player.alive && Math.floor(player.x) === x && Math.floor(player.y) === y) {
+                return { content: player.emoji || '🤖', className: 'cell' };
+            }
         }
-        
+
         // Check for explosion at this position
         if (this.game.explosions.some(e => e.x === x && e.y === y)) {
             return { content: '💥', className: 'cell' };
@@ -110,7 +136,7 @@ class BombermanGame {
         const powerup = this.game.powerups.find(p => p.x === x && p.y === y);
         if (powerup) {
             const icons = { bomb: '💣', power: '🔥', speed: '👟' };
-            return { content: icons[powerup.type], className: 'cell' };
+            return { content: icons[powerup.type], className: `cell powerup-${powerup.type}` };
         }
 
         // Check board cell
@@ -145,6 +171,11 @@ class BombermanGame {
 
         // Always handle input to maintain proper state tracking
         this.handleInput(deltaTime);
+
+        // Update AI controllers
+        for (const ai of this.aiControllers) {
+            ai.update(deltaTime);
+        }
 
         // Update game state (all logic is now in GameState)
         this.game.update(deltaTime);
