@@ -21,7 +21,6 @@ class BombermanGame {
     init() {
         // Create game instance
         this.game = new Game();
-        this.game.screen = 'game';
         
         // Create player at starting position
         this.player = this.game.createPlayer(0, 1, 1, true);
@@ -103,19 +102,19 @@ class BombermanGame {
         }
         
         // Check for explosion at this position
-        if (this.game.game.explosions.some(e => e.x === x && e.y === y)) {
+        if (this.game.explosions.some(e => e.x === x && e.y === y)) {
             return { content: '💥', className: 'cell' };
         }
-        
+
         // Check for powerup at this position
-        const powerup = this.game.game.powerups.find(p => p.x === x && p.y === y);
+        const powerup = this.game.powerups.find(p => p.x === x && p.y === y);
         if (powerup) {
             const icons = { bomb: '💣', power: '🔥', speed: '👟' };
             return { content: icons[powerup.type], className: 'cell' };
         }
-        
+
         // Check board cell
-        const cell = this.game.game.board[y][x];
+        const cell = this.game.board[y][x];
         switch (cell) {
             case 'bomb': return { content: '💣', className: 'cell' };
             case 'wall': return { content: '🧱', className: 'cell wall' };

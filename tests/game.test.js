@@ -13,8 +13,8 @@ describe('Game Engine', () => {
     it('should initialize with custom board size', () => {
         assert.strictEqual(game.boardWidth, 5);
         assert.strictEqual(game.boardHeight, 5);
-        assert.strictEqual(game.game.board.length, 5);
-        assert.strictEqual(game.game.board[0].length, 5);
+        assert.strictEqual(game.board.length, 5);
+        assert.strictEqual(game.board[0].length, 5);
     });
 
     it('should create board with correct layout', () => {
@@ -34,7 +34,7 @@ describe('Game Engine', () => {
     });
 
     it('should have clear spawn corners', () => {
-        const board = game.game.board;
+        const board = game.board;
         
         // Corners should be clear for spawning
         assert.strictEqual(board[1][1], null, 'Top-left spawn should be clear');
@@ -104,8 +104,8 @@ describe('Game Engine', () => {
 
     it('should render complex game state', () => {
         // Set up a specific board state
-        game.game.board[1][1] = 'crate';
-        game.game.board[1][3] = 'crate';
+        game.board[1][1] = 'crate';
+        game.board[1][3] = 'crate';
         
         const player = game.createPlayer(1, 2, 2, true);
         game.addBomb(1, 2, player);
@@ -142,7 +142,7 @@ describe('Game Engine', () => {
         for (let y = 1; y < 4; y++) {
             for (let x = 1; x < 4; x++) {
                 if (x !== 2 || y !== 2) { // Keep center wall
-                    game.game.board[y][x] = null;
+                    game.board[y][x] = null;
                 }
             }
         }
@@ -179,7 +179,7 @@ describe('Game Engine', () => {
         // Clear board for testing
         for (let y = 1; y < 4; y++) {
             for (let x = 1; x < 4; x++) {
-                game.game.board[y][x] = null;
+                game.board[y][x] = null;
             }
         }
         
@@ -199,7 +199,7 @@ describe('Game Engine', () => {
         // Clear board for testing
         for (let y = 1; y < 4; y++) {
             for (let x = 1; x < 4; x++) {
-                game.game.board[y][x] = null;
+                game.board[y][x] = null;
             }
         }
         
@@ -227,12 +227,12 @@ describe('Game Engine', () => {
         // Clear board for testing
         for (let y = 1; y < 4; y++) {
             for (let x = 1; x < 4; x++) {
-                game.game.board[y][x] = null;
+                game.board[y][x] = null;
             }
         }
         
         // Put wall to block explosion
-        game.game.board[2][2] = 'wall';
+        game.board[2][2] = 'wall';
         
         player.x = 1;
         player.y = 2;
@@ -259,11 +259,11 @@ describe('Game Engine', () => {
         // Clear board for testing
         for (let y = 1; y < 4; y++) {
             for (let x = 1; x < 4; x++) {
-                game.game.board[y][x] = null;
+                game.board[y][x] = null;
             }
         }
         
-        game.game.board[2][3] = 'crate';
+        game.board[2][3] = 'crate';
         
         player.x = 2;
         player.y = 2;
@@ -274,7 +274,7 @@ describe('Game Engine', () => {
         game.explodeBomb(bomb);
         
         // Crate should be destroyed
-        assert.strictEqual(game.game.board[2][3], null);
+        assert.strictEqual(game.board[2][3], null);
         
         // Explosion reaches crate position
         const expected = 
@@ -337,21 +337,21 @@ describe('Game Engine', () => {
         player.y = 1;
         
         game.placeBomb(player);
-        assert.strictEqual(game.game.bombs.length, 1);
+        assert.strictEqual(game.bombs.length, 1);
         
         // Try to place another bomb
         player.x = 3;
         player.y = 3;
         game.placeBomb(player);
         
-        assert.strictEqual(game.game.bombs.length, 1, 'Should not exceed max bombs');
+        assert.strictEqual(game.bombs.length, 1, 'Should not exceed max bombs');
     });
 
     it('should trigger chain reactions', () => {
         const player = game.createPlayer(0, 1, 1, true);
         // Clear area for testing
-        game.game.board[1][2] = null;
-        game.game.board[1][3] = null;
+        game.board[1][2] = null;
+        game.board[1][3] = null;
         
         // Place two bombs next to each other
         player.x = 1;
@@ -376,8 +376,8 @@ describe('Game Engine', () => {
     it('should allow player to stay on their own bomb', () => {
         const player = game.createPlayer(0, 1, 1, true);
         // Clear area
-        game.game.board[1][1] = null;
-        game.game.board[1][2] = null;
+        game.board[1][1] = null;
+        game.board[1][2] = null;
         
         player.x = 1;
         player.y = 1;
@@ -392,8 +392,8 @@ describe('Game Engine', () => {
     it('should not allow walking back onto bomb after leaving', () => {
         const player = game.createPlayer(0, 1, 1, true);
         // Clear area
-        game.game.board[1][1] = null;
-        game.game.board[1][2] = null;
+        game.board[1][1] = null;
+        game.board[1][2] = null;
         
         player.x = 1;
         player.y = 1;

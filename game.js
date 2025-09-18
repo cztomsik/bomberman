@@ -1,38 +1,24 @@
 class Game {
     constructor(width = 15, height = 13) {
-        this.screen = 'main-menu';
-        
-        this.game = {
-            board: [],
-            players: [],
-            bombs: [],
-            explosions: [],
-            powerups: [],
-            winner: null
-        };
-        
-        this.input = {
-            keys: {},
-            actions: []
-        };
-        
         this.boardWidth = width;
         this.boardHeight = height;
-        
-        this.resetGame();
+
+        // Game state - directly on instance
+        this.board = this.createBoard();
+        this.players = [];
+        this.bombs = [];
+        this.explosions = [];
+        this.powerups = [];
+        this.winner = null;
     }
     
     resetGame() {
-        this.game = {
-            board: this.createBoard(),
-            players: [],
-            bombs: [],
-            explosions: [],
-            powerups: [],
-            winner: null
-        };
-        
-        this.input.actions = [];
+        this.board = this.createBoard();
+        this.players = [];
+        this.bombs = [];
+        this.explosions = [];
+        this.powerups = [];
+        this.winner = null;
     }
     
     createBoard() {
@@ -74,7 +60,7 @@ class Game {
             maxBombs: 1, activeBombs: 0, bombCount: 1,
             powerups: [], moveTimer: 0, action: null
         };
-        this.game.players.push(player);
+        this.players.push(player);
         return player;
     }
     
@@ -87,54 +73,54 @@ class Game {
             power: owner.bombPower
         };
         
-        this.game.bombs.push(bomb);
-        this.game.board[y][x] = 'bomb';
+        this.bombs.push(bomb);
+        this.board[y][x] = 'bomb';
         owner.activeBombs++;
         
         return bomb;
     }
     
     removeBomb(bomb) {
-        const index = this.game.bombs.indexOf(bomb);
-        if (index !== -1) this.game.bombs.splice(index, 1);
-        if (this.game.board[bomb.y][bomb.x] === 'bomb') {
-            this.game.board[bomb.y][bomb.x] = null;
+        const index = this.bombs.indexOf(bomb);
+        if (index !== -1) this.bombs.splice(index, 1);
+        if (this.board[bomb.y][bomb.x] === 'bomb') {
+            this.board[bomb.y][bomb.x] = null;
         }
         bomb.owner.activeBombs--;
     }
     
     addExplosion(x, y, duration = 500) {
         const explosion = { x, y, timer: duration };
-        this.game.explosions.push(explosion);
+        this.explosions.push(explosion);
         return explosion;
     }
     
     removeExplosion(explosion) {
-        const index = this.game.explosions.indexOf(explosion);
-        if (index !== -1) this.game.explosions.splice(index, 1);
+        const index = this.explosions.indexOf(explosion);
+        if (index !== -1) this.explosions.splice(index, 1);
     }
     
     addPowerup(x, y, type) {
         const powerup = { x, y, type };
-        this.game.powerups.push(powerup);
+        this.powerups.push(powerup);
         return powerup;
     }
     
     removePowerup(powerup) {
-        const index = this.game.powerups.indexOf(powerup);
-        if (index !== -1) this.game.powerups.splice(index, 1);
+        const index = this.powerups.indexOf(powerup);
+        if (index !== -1) this.powerups.splice(index, 1);
     }
     
     getEntityAt(x, y) {
-        return this.game.players.find(e => e.alive && Math.floor(e.x) === x && Math.floor(e.y) === y);
+        return this.players.find(e => e.alive && Math.floor(e.x) === x && Math.floor(e.y) === y);
     }
     
     getPowerupAt(x, y) {
-        return this.game.powerups.find(p => p.x === x && p.y === y);
+        return this.powerups.find(p => p.x === x && p.y === y);
     }
     
     getBombAt(x, y) {
-        return this.game.bombs.find(b => b.x === x && b.y === y);
+        return this.bombs.find(b => b.x === x && b.y === y);
     }
     
     isWalkable(x, y) {
@@ -142,20 +128,8 @@ class Game {
             return false;
         }
         
-        const cell = this.game.board[y][x];
+        const cell = this.board[y][x];
         return cell === null || cell === 'powerup';
-    }
-    
-    addInputAction(playerId, action) {
-        this.input.actions.push({ playerId, action, timestamp: Date.now() });
-    }
-    
-    clearInputActions() {
-        this.input.actions = [];
-    }
-    
-    getPlayerActions(playerId) {
-        return this.input.actions.filter(a => a.playerId === playerId);
     }
     
     // Game logic methods
@@ -192,7 +166,7 @@ class Game {
     updateBombs(deltaTime) {
         const bombsToExplode = [];
         
-        for (const bomb of this.game.bombs) {
+        for (const bomb of this.bombs) {
             bomb.timer -= deltaTime;
             
             if (bomb.timer <= 0) {
@@ -231,11 +205,11 @@ class Game {
                     break;
                 }
                 
-                const cell = this.game.board[y][x];
-                
+                const cell = this.board[y][x];
+
                 // Stop at walls
                 if (cell === 'wall') break;
-                
+
                 // Add explosion
                 this.addExplosion(x, y);
 
@@ -247,7 +221,7 @@ class Game {
 
                 // Destroy crates
                 if (cell === 'crate') {
-                    this.game.board[y][x] = null;
+                    this.board[y][x] = null;
 
                     // Chance to spawn powerup
                     if (Math.random() < 0.3) {
@@ -270,7 +244,7 @@ class Game {
     updateExplosions(deltaTime) {
         const explosionsToRemove = [];
         
-        for (const explosion of this.game.explosions) {
+        for (const explosion of this.explosions) {
             explosion.timer -= deltaTime;
             
             if (explosion.timer <= 0) {
@@ -290,7 +264,7 @@ class Game {
         const py = player.y;
         
         // Check explosion collisions
-        for (const explosion of this.game.explosions) {
+        for (const explosion of this.explosions) {
             if (explosion.x === px && explosion.y === py) {
                 player.alive = false;
                 return;
@@ -327,7 +301,7 @@ class Game {
         this.updateExplosions(deltaTime);
         
         // Check collisions for all players
-        for (const player of this.game.players) {
+        for (const player of this.players) {
             this.checkCollisions(player);
         }
     }
@@ -345,7 +319,7 @@ class Game {
                 }
                 
                 // Check for explosion
-                const explosion = this.game.explosions.find(e => e.x === x && e.y === y);
+                const explosion = this.explosions.find(e => e.x === x && e.y === y);
                 if (explosion) {
                     result += 'X';
                     continue;
@@ -359,7 +333,7 @@ class Game {
                 }
                 
                 // Check board cell
-                const cell = this.game.board[y][x];
+                const cell = this.board[y][x];
                 switch (cell) {
                     case 'wall': result += '#'; break;
                     case 'crate': result += '%'; break;
