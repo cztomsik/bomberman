@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Run AI behavior tests
+        run: node test-ai.js
+        timeout-minutes: 1
+
+      - name: Check file structure
+        run: |
+          echo "Checking required files..."
+          test -f index.html || (echo "index.html missing!" && exit 1)
+          test -f main.js || (echo "main.js missing!" && exit 1)
+          test -f game.js || (echo "game.js missing!" && exit 1)
+          test -f ai.js || (echo "ai.js missing!" && exit 1)
+          echo "All required files present ✓"
+
+      - name: Validate HTML
+        run: |
+          npx html-validate index.html || true
+
+  browser-compatibility:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check ES6 module syntax
+        run: |
+          echo "Checking for ES6 module imports..."
+          grep -l "import .* from" *.js || echo "No ES6 imports found in JS files"
+          grep -l "export" *.js || echo "No ES6 exports found in JS files"

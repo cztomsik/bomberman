@@ -4,10 +4,20 @@
   "type": "module",
   "main": "main.js",
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "test:ai": "node test-ai.js",
+    "serve": "npx serve ."
   },
-  "keywords": [],
+  "keywords": ["game", "bomberman", "browser-game", "javascript"],
   "author": "",
-  "license": "ISC",
-  "description": ""
+  "license": "MIT",
+  "description": "Browser-based Bomberman game with AI opponents",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cztomsik/bomberman.git"
+  }
 }
