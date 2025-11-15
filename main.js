@@ -12,9 +12,15 @@ class BombermanGame {
         this.keys = {};
         this.lastTime = 0;
         this.movementTimer = 0;
-        this.gameState = 'playing'; // 'playing', 'paused', 'gameover'
+        this.gameState = 'menu'; // 'menu', 'playing', 'paused', 'gameover'
+        this.menuSelection = 0;
+        this.menuOptions = ['Start Game', 'Controls'];
+        this.showingControls = false;
 
-        this.init();
+        // Set initial canvas size for menu
+        this.canvas.width = 600;
+        this.canvas.height = 520;
+
         this.setupInput();
         this.gameLoop(0);
     }
@@ -61,8 +67,14 @@ class BombermanGame {
             this.keys[e.key] = true;
 
             // Prevent default for game keys
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter'].includes(e.key)) {
                 e.preventDefault();
+            }
+
+            // Handle menu input
+            if (this.gameState === 'menu') {
+                this.handleMenuInput(e.key);
+                return;
             }
 
             // Handle special keys
@@ -77,6 +89,33 @@ class BombermanGame {
         document.addEventListener('keyup', (e) => {
             this.keys[e.key] = false;
         });
+    }
+
+    handleMenuInput(key) {
+        if (this.showingControls) {
+            // Any key closes the controls screen
+            if (key === 'Enter' || key === 'Escape' || key === ' ') {
+                this.showingControls = false;
+            }
+            return;
+        }
+
+        if (key === 'ArrowUp') {
+            this.menuSelection = (this.menuSelection - 1 + this.menuOptions.length) % this.menuOptions.length;
+        } else if (key === 'ArrowDown') {
+            this.menuSelection = (this.menuSelection + 1) % this.menuOptions.length;
+        } else if (key === 'Enter' || key === ' ') {
+            this.selectMenuOption();
+        }
+    }
+
+    selectMenuOption() {
+        const option = this.menuOptions[this.menuSelection];
+        if (option === 'Start Game') {
+            this.init();
+        } else if (option === 'Controls') {
+            this.showingControls = true;
+        }
     }
 
     togglePause() {
@@ -150,6 +189,13 @@ class BombermanGame {
 
     render() {
         const ctx = this.ctx;
+
+        // Render menu if in menu state
+        if (this.gameState === 'menu') {
+            this.renderMenu();
+            return;
+        }
+
         const { boardWidth, boardHeight, board, players, bombs, explosions, powerups } = this.game;
 
         // Clear canvas
@@ -264,6 +310,88 @@ class BombermanGame {
         lines.forEach((line, i) => {
             ctx.fillText(line, this.canvas.width/2, this.canvas.height/2 + 20 + i * 30);
         });
+    }
+
+    renderMenu() {
+        const ctx = this.ctx;
+
+        // Background
+        ctx.fillStyle = '#222';
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Title with bomb emoji
+        ctx.font = 'bold 60px monospace';
+        ctx.fillStyle = '#ff6600';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('BOMBERMAN', this.canvas.width/2, 100);
+
+        // Decorative bombs
+        ctx.font = '40px serif';
+        ctx.fillText('💣', this.canvas.width/2 - 180, 100);
+        ctx.fillText('💣', this.canvas.width/2 + 180, 100);
+
+        if (this.showingControls) {
+            this.renderControlsScreen();
+            return;
+        }
+
+        // Menu options
+        ctx.font = '24px monospace';
+        const startY = 220;
+        const spacing = 50;
+
+        this.menuOptions.forEach((option, i) => {
+            const y = startY + i * spacing;
+
+            if (i === this.menuSelection) {
+                // Highlight selected option
+                ctx.fillStyle = '#ff6600';
+                ctx.fillText('> ' + option + ' <', this.canvas.width/2, y);
+            } else {
+                ctx.fillStyle = 'white';
+                ctx.fillText(option, this.canvas.width/2, y);
+            }
+        });
+
+        // Instructions
+        ctx.font = '16px monospace';
+        ctx.fillStyle = '#888';
+        ctx.fillText('Use Arrow Keys to navigate', this.canvas.width/2, 380);
+        ctx.fillText('Press Enter or Space to select', this.canvas.width/2, 410);
+
+        // Credits
+        ctx.font = '14px monospace';
+        ctx.fillStyle = '#666';
+        ctx.fillText('Classic Bomberman Clone', this.canvas.width/2, 480);
+    }
+
+    renderControlsScreen() {
+        const ctx = this.ctx;
+
+        // Controls title
+        ctx.font = 'bold 36px monospace';
+        ctx.fillStyle = '#ff6600';
+        ctx.fillText('CONTROLS', this.canvas.width/2, 200);
+
+        // Control list
+        ctx.font = '20px monospace';
+        ctx.fillStyle = 'white';
+        const controls = [
+            'Arrow Keys - Move',
+            'Space - Place Bomb',
+            'P - Pause Game',
+            'R - Restart (Game Over)'
+        ];
+
+        controls.forEach((control, i) => {
+            ctx.fillText(control, this.canvas.width/2, 260 + i * 35);
+        });
+
+        // Back instruction
+        ctx.font = '16px monospace';
+        ctx.fillStyle = '#888';
+        ctx.fillText('Press Enter or Escape to go back', this.canvas.width/2, 440);
     }
 
     gameLoop(currentTime) {
