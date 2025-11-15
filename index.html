@@ -3,44 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bomberman</title>
+    <title>Playground</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            background: #222;
-            color: white;
-            font-family: monospace;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f5f5f5;
         }
-
-        canvas {
-            background: #111;
-            border-radius: 5px;
+        h1 {
+            color: #333;
         }
-
-        .info {
-            margin-top: 10px;
-            padding: 10px;
-            background: #333;
-            border-radius: 5px;
-            text-align: center;
+        .projects {
+            display: grid;
+            gap: 1rem;
+        }
+        .project {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .project:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .project h2 {
+            margin: 0 0 0.5rem 0;
+            color: #0066cc;
+        }
+        .project p {
+            margin: 0;
+            color: #666;
         }
     </style>
 </head>
 <body>
-    <canvas id="game"></canvas>
-    <div class="info">
-        <p>Arrow keys: Move | Space: Bomb | P: Pause | R: Restart</p>
+    <h1>Playground</h1>
+    <div class="projects">
+        <a href="bomberman/" class="project">
+            <h2>Bomberman</h2>
+            <p>Browser-based Bomberman clone with AI opponents and emoji graphics</p>
+        </a>
     </div>
-    <script type="module" src="main.js"></script>
 </body>
 </html>
