@@ -137,7 +137,7 @@ export default class AIController {
         if (this.player.activeBombs >= this.player.maxBombs) return false;
 
         // Don't bomb too frequently
-        const now = Date.now();
+        const now = this.game.gameTime;
         if (now - this.lastBombTime < this.minBombInterval) return false;
 
         // Check if there's something worth bombing adjacent
@@ -222,7 +222,7 @@ export default class AIController {
     placeBombAndEscape(x, y) {
         console.log(`[AI ${this.playerIndex}] Placing bomb at (${x}, ${y})`);
         this.game.placeBomb(this.player);
-        this.lastBombTime = Date.now();
+        this.lastBombTime = this.game.gameTime;
 
         // Immediately plan escape
         this.planEscape(x, y);

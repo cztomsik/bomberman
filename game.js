@@ -1,7 +1,11 @@
 class Game {
-    constructor(width = 15, height = 13) {
+    constructor(width = 15, height = 13, seed = null) {
         this.boardWidth = width;
         this.boardHeight = height;
+
+        // Seeded random number generator for deterministic behavior
+        this.seed = seed !== null ? seed : Math.floor(Math.random() * 2147483647);
+        this.rngState = this.seed;
 
         // Game state - directly on instance
         this.board = this.createBoard();
@@ -10,15 +14,26 @@ class Game {
         this.explosions = [];
         this.powerups = [];
         this.winner = null;
+        this.gameTime = 0; // Track total game time in ms
     }
-    
+
+    // Simple seeded random number generator (mulberry32)
+    random() {
+        let t = this.rngState += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+
     resetGame() {
+        this.rngState = this.seed;
         this.board = this.createBoard();
         this.players = [];
         this.bombs = [];
         this.explosions = [];
         this.powerups = [];
         this.winner = null;
+        this.gameTime = 0;
     }
     
     createBoard() {
@@ -42,11 +57,11 @@ class Game {
                 }
                 
                 // Clear spawn areas (2-block radius from corners)
-                const nearCorner = corners.some(([cx, cy]) => 
+                const nearCorner = corners.some(([cx, cy]) =>
                     Math.abs(x - cx) + Math.abs(y - cy) <= 1
                 );
-                
-                board[y][x] = nearCorner ? null : (Math.random() < 0.7 ? 'crate' : null);
+
+                board[y][x] = nearCorner ? null : (this.random() < 0.7 ? 'crate' : null);
             }
         }
         
@@ -224,9 +239,9 @@ class Game {
                     this.board[y][x] = null;
 
                     // Chance to spawn powerup
-                    if (Math.random() < 0.3) {
+                    if (this.random() < 0.3) {
                         const types = ['bomb', 'power', 'speed'];
-                        const type = types[Math.floor(Math.random() * types.length)];
+                        const type = types[Math.floor(this.random() * types.length)];
                         this.addPowerup(x, y, type);
                     }
                     break; // Explosion stops at crate
@@ -297,9 +312,10 @@ class Game {
     
     // Main update method for game loop
     update(deltaTime) {
+        this.gameTime += deltaTime;
         this.updateBombs(deltaTime);
         this.updateExplosions(deltaTime);
-        
+
         // Check collisions for all players
         for (const player of this.players) {
             this.checkCollisions(player);
