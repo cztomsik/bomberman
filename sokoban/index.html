@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sokoban</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Sokoban</h1>
+        </header>
+
+        <div class="game-info">
+            <span>Level: <span id="level-number">1</span></span>
+            <span>Moves: <span id="move-counter">0</span></span>
+            <button id="reset-btn">Reset (R)</button>
+        </div>
+
+        <div id="game-grid" class="game-grid"></div>
+
+        <div class="controls">
+            <p>Use arrow keys or WASD to move</p>
+            <p>Push all boxes onto targets to win</p>
+        </div>
+
+        <div id="win-message" class="win-message hidden">
+            Level Complete! Press any key for next level.
+        </div>
+    </div>
+
+    <script src="levels.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
