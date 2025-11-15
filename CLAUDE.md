@@ -4,24 +4,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Bomberman clone implemented as a browser-based game using vanilla HTML, CSS, and JavaScript. The game features emoji-based graphics, CPU AI opponents, local multiplayer, and a modular screen-based architecture.
+This is a Bomberman clone implemented as a browser-based game using vanilla HTML, CSS, and JavaScript with Canvas rendering. The game features emoji-based graphics and CPU AI opponents.
 
 ## Development Commands
 
 Since this is a vanilla JavaScript project, no build tools are required:
 
 - **Run the game**: Open `index.html` in a web browser or use a local server
-- **Local development**: Use any static file server (e.g., `python -m http.server 8000`)
+- **Local development**: Use any static file server (e.g., `python -m http.server 8000` or `npm run serve`)
 - **Run tests**: `npm test` - Uses Node.js built-in test runner
+- **Test AI**: `npm run test:ai` - Runs AI behavior simulation
 
 ## Architecture Overview
 
 ### Core Architecture Pattern
 The project uses a **class-based architecture** with clear separation of concerns:
 
-- **main.js**: UI layer that handles DOM rendering, input events, and browser-specific concerns
-- **game.js**: Game engine class that contains all game logic, state, and mechanics
-- **Screen modules**: Each screen (menu, game, settings) has its own module that renders UI and handles events
+- **game.js**: Pure game engine class that contains all game logic, state, and mechanics (no rendering)
+- **main.js**: UI layer that handles Canvas rendering, input events, and game loop coordination
+- **ai.js**: AI controller that makes decisions for CPU players
 
 ### Key Architectural Components
 
@@ -30,142 +31,144 @@ The project uses a **class-based architecture** with clear separation of concern
    - Contains all game state (board, players, bombs, explosions, powerups)
    - Handles all game logic (movement, explosions, collisions, powerups)
    - Provides main `update(deltaTime)` method for game loop
-   - Pure game engine that can run headless (no DOM dependencies)
+   - Pure game engine that can run headless (no rendering dependencies)
+   - `renderToString()` method for testing
 
 2. **UI Layer** (`main.js`):
-   - `BombermanGame` class that manages DOM and user interface
+   - `BombermanGame` class that manages Canvas rendering and user interface
    - Creates and owns a `Game` instance
    - Handles keyboard input and translates to game actions
-   - Renders game state to DOM using emojis
-   - Manages game loop coordination
+   - Renders game state to Canvas using emojis
+   - Manages game loop with requestAnimationFrame
+   - Handles game states (playing, paused, game over)
 
-3. **Screen System**:
-   - Each screen is a separate module that exports init/cleanup functions
-   - Screen transitions handled by watching `GameState.screen` changes
-   - All screens render into the main `#app` container
-
-4. **AI System** (`cpu.js`):
-   - Behavior-based AI with danger evaluation, target finding, and pathfinding
-   - Three difficulty levels with different reaction times and strategy complexity
+3. **AI System** (`ai.js`):
+   - `AIController` class with behavior-based AI
+   - Danger evaluation and escape planning
+   - A* pathfinding for movement
+   - Strategic bombing with escape route validation
+   - Goal prioritization (powerups → crates → enemies → exploration)
 
 ### Data Flow
 1. User input → `BombermanGame` input handlers
 2. Input translated to game actions → `Game` instance methods
-3. `Game.update(deltaTime)` processes all game logic each frame
-4. `BombermanGame.render()` displays current game state in DOM
+3. AI controllers update → `Game` instance methods
+4. `Game.update(deltaTime)` processes all game logic each frame
+5. `BombermanGame.render()` draws current game state to Canvas
 
-## File Structure & Responsibilities
+## File Structure
 
-### Core Files
-- `main.js`: UI layer, DOM rendering, input handling, game loop coordination
-- `game.js`: Game engine class with all game logic and state
-- `cpu.js`: AI opponent logic (if implemented)
-- `tests/`: Unit tests for game logic using Node.js test runner
-
-### UI Screens
-Each screen is implemented as a separate module that exports `init` and optionally `render` functions following a consistent pattern:
-
-- `menu-screen.js`: Main menu interface
-- `game-screen.js`: Game board rendering and input handling
-- `settings-screen.js`: Game configuration
-- `character-selection.js`: Player character selection screen
-- `stats-screen.js`: Statistics display and management
-- `game-over-screen.js`: Game over screen with results and options
-- `controls-screen.js`: Controls explanation
-
-### Utilities
-- `utils.js`: Shared constants and helper functions
-- `styles.css`: All styling for the game
+```
+/
+├── index.html          # Entry point with Canvas element
+├── main.js             # UI layer, Canvas rendering, input, game loop
+├── game.js             # Pure game engine (logic and state)
+├── ai.js               # AI controller for CPU players
+├── test-ai.js          # AI behavior testing script
+├── tests/
+│   └── game.test.js    # Unit tests for game logic
+├── package.json        # Project configuration
+├── CLAUDE.md           # This file
+├── DESIGN.md           # Original design document
+├── AI_DESIGN.md        # AI behavior specification
+└── NEXT.md             # Known issues and improvements
+```
 
 ## Key Implementation Details
 
+### Canvas Rendering
+- Uses HTML5 Canvas API for efficient rendering
+- Grid-based rendering with emoji characters
+- Cell size configurable (default 40x40 pixels)
+- Renders: board, players, bombs, explosions, powerups, UI overlay
+
 ### Game Board System
-- Uses a 2D array (`game.game.board`) for the grid
+- Uses a 2D array (`game.board`) for the grid
+- Default size: 15x13 grid
 - Coordinates are (x, y) with (0,0) at top-left
 - Cell types: `null` (empty), `'wall'`, `'crate'`, `'bomb'`
-- Board generation creates classic Bomberman layout with player spawn areas
+- Board generation creates classic Bomberman layout with clear spawn corners
 
-### Player Movement
-- Players have fractional coordinates but move on grid alignment
-- Movement system handles collision detection with walls/crates
-- Players can walk through their own bombs but not others'
+### Player System
+- Players use integer grid coordinates
+- Properties: id, x, y, alive, speed, bombPower, maxBombs, activeBombs
+- Human player controlled via arrow keys + spacebar
+- AI players controlled by AIController instances
 
 ### Bomb Mechanics
-- 3-second timer before explosion
+- 3-second timer before explosion (3000ms)
 - Cross-pattern explosion with configurable power
-- Chain reactions trigger other bombs
+- Chain reactions trigger other bombs instantly
 - 30% chance for powerups from destroyed crates
+- Explosion duration: 500ms
+
+### Powerup Types
+- 💣 `bomb`: Increase max bomb capacity (+1, max 8)
+- 🔥 `power`: Increase explosion radius (+1, max 8)
+- 👟 `speed`: Faster movement (+0.5, max 3)
 
 ### AI Behavior
-- Evaluates immediate danger from bombs/explosions
-- Finds targets (powerups, destructible crates, other players)
-- Uses simple pathfinding for movement decisions
-- Different difficulty levels affect reaction speed and strategy
+- Single decision loop each update cycle
+- Priority: escape danger → bomb targets → follow path → find new goal
+- Uses A* pathfinding with danger avoidance
+- Validates escape routes before placing bombs
+- Stuck detection with automatic recovery
+
+### Game States
+- **Playing**: Normal gameplay
+- **Paused**: Game frozen, press P to resume
+- **Game Over**: Shows winner, press R to restart
 
 ## Testing
 
-The project includes comprehensive unit tests covering:
-- **Game Logic**: Movement, bomb mechanics, explosions, collisions
-- **State Management**: Board generation, entity management, game state
-- **String Rendering**: Text-based board representation for testing
+Tests use Node.js built-in test runner:
 
-Tests use Node.js built-in test runner and can create isolated `Game` instances for testing game logic without DOM dependencies.
+```bash
+npm test                    # Run unit tests
+npm run test:ai            # Run AI simulation
+```
+
+### Test Coverage
+- Board generation and layout
+- Player movement and collision
+- Bomb placement and explosion mechanics
+- Powerup collection and effects
+- Chain reactions
+
+### Testing Game Logic
+- Create isolated `Game` instances: `const game = new Game(5, 5)`
+- Use `game.renderToString()` to verify game state
+- Test game logic independently of rendering
 
 ## Common Development Patterns
 
-### Adding New Screens
-Each screen follows a consistent modular pattern:
-
-1. **Create screen module** (e.g., `new-screen.js`):
-   ```javascript
-   import Game from './game.js';
-   
-   export function renderNewScreen() {
-       return `<div class="new-screen">...</div>`;
-   }
-   
-   export function initNewScreen(container) {
-       container.innerHTML = renderNewScreen();
-       // Add event listeners
-   }
-   ```
-
-2. **Import in main.js**:
-   ```javascript
-   import { initNewScreen } from './new-screen.js';
-   ```
-
-3. **Add to screen switch**:
-   ```javascript
-   case 'new-screen':
-       initNewScreen(this.container);
-       break;
-   ```
-
-4. **Navigate to screen**:
-   ```javascript
-   game.screen = 'new-screen';
-   ```
-
 ### Modifying Game Logic
-- Add new methods to the `Game` class in `game.js`
-- Game logic methods receive necessary parameters (players, deltaTime, etc.)
-- Call `game.update(deltaTime)` in the main game loop
+1. Add/modify methods in the `Game` class (`game.js`)
+2. Game logic is pure - no rendering or input concerns
+3. All state changes go through Game methods
+4. Test with `game.renderToString()` or unit tests
 
-### Testing Game Logic
-- Create isolated `Game` instances in tests: `const game = new Game(5, 5)`
-- Use `game.renderToString()` to verify game state in tests
-- Test game logic independently of DOM/UI concerns
+### Adding Visual Features
+1. Modify rendering in `BombermanGame.render()` (`main.js`)
+2. Use Canvas 2D context methods
+3. Keep rendering separate from game logic
 
-### Event Handling
-- Each screen manages its own event listeners
-- Use event delegation on container element
-- Clean up listeners when switching screens
+### Improving AI
+1. Modify `AIController` class (`ai.js`)
+2. AI uses game state read-only, actions through game methods
+3. Test with `npm run test:ai`
+
+## Controls
+
+- **Arrow Keys**: Move player
+- **Spacebar**: Place bomb
+- **P**: Pause/Resume game
+- **R**: Restart game (when game over)
 
 ## Development Notes
 
 - **No build process**: Pure vanilla JavaScript with ES6 modules
 - **No external dependencies**: All functionality implemented from scratch
-- **Emoji graphics**: Uses Unicode emojis for all game visuals
-- **Browser compatibility**: Requires modern browser with ES6 module support
-- **Performance**: Efficient DOM updates using innerHTML and template literals
+- **Canvas rendering**: Efficient emoji-based graphics
+- **Browser compatibility**: Requires modern browser with ES6 module and Canvas support
+- **Performance**: ~60fps with requestAnimationFrame

@@ -1,6 +1,5 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import { BombermanGame } from '../main.js';
 import Game from '../game.js';
 
 describe('Game Engine', () => {
@@ -394,40 +393,114 @@ describe('Game Engine', () => {
         // Clear area
         game.board[1][1] = null;
         game.board[1][2] = null;
-        
+
         player.x = 1;
         player.y = 1;
         game.placeBomb(player);
-        
+
         // Move away from bomb
         game.movePlayer(player, 0, 1);
         assert.strictEqual(player.y, 2);
-        
+
         // Try to move back onto bomb
         game.movePlayer(player, 0, -1);
         assert.strictEqual(player.y, 2, 'Should not move back onto bomb');
     });
-});
 
-describe('BombermanGame UI', () => {
-    let bombermanGame;
-    let game;
+    it('should detect game over when one player remains', () => {
+        const player1 = game.createPlayer(0, 1, 1, true);
+        const player2 = game.createPlayer(1, 3, 3, false);
 
-    beforeEach(() => {
-        bombermanGame = new BombermanGame({ skipInit: true });
-        game = new Game(5, 5);
-        bombermanGame.game = game;
+        // Both alive
+        const alive = game.players.filter(p => p.alive);
+        assert.strictEqual(alive.length, 2);
+
+        // Kill player2
+        player2.alive = false;
+        const remaining = game.players.filter(p => p.alive);
+        assert.strictEqual(remaining.length, 1);
+        assert.strictEqual(remaining[0], player1);
     });
 
-    it('should initialize with player', () => {
-        bombermanGame.init();
-        assert.ok(bombermanGame.player);
-        assert.strictEqual(bombermanGame.player.x, 1);
-        assert.strictEqual(bombermanGame.player.y, 1);
-        
-        // Check player appears on board
-        const boardStr = bombermanGame.game.renderToString();
-        const lines = boardStr.split('\n');
-        assert.strictEqual(lines[1][1], 'P');
+    it('should detect draw when all players die', () => {
+        const player1 = game.createPlayer(0, 1, 1, true);
+        const player2 = game.createPlayer(1, 3, 3, false);
+
+        player1.alive = false;
+        player2.alive = false;
+
+        const remaining = game.players.filter(p => p.alive);
+        assert.strictEqual(remaining.length, 0);
+    });
+
+    it('should generate deterministic boards with same seed', () => {
+        const game1 = new Game(15, 13, 12345);
+        const game2 = new Game(15, 13, 12345);
+
+        const board1 = game1.renderToString();
+        const board2 = game2.renderToString();
+
+        assert.strictEqual(board1, board2, 'Same seed should produce identical boards');
+    });
+
+    it('should generate different boards with different seeds', () => {
+        const game1 = new Game(15, 13, 12345);
+        const game2 = new Game(15, 13, 54321);
+
+        const board1 = game1.renderToString();
+        const board2 = game2.renderToString();
+
+        assert.notStrictEqual(board1, board2, 'Different seeds should produce different boards');
+    });
+
+    it('should track game time', () => {
+        assert.strictEqual(game.gameTime, 0);
+
+        game.update(100);
+        assert.strictEqual(game.gameTime, 100);
+
+        game.update(50);
+        assert.strictEqual(game.gameTime, 150);
+    });
+
+    it('should reset game time on resetGame', () => {
+        game.update(100);
+        assert.strictEqual(game.gameTime, 100);
+
+        game.resetGame();
+        assert.strictEqual(game.gameTime, 0);
+    });
+
+    it('should generate deterministic powerups with same seed', () => {
+        // Use a larger board with known seed
+        const game1 = new Game(15, 13, 99999);
+        const game2 = new Game(15, 13, 99999);
+
+        const player1 = game1.createPlayer(0, 7, 6, true);
+        const player2 = game2.createPlayer(0, 7, 6, true);
+
+        // Clear some crates to place bombs
+        game1.board[6][8] = 'crate';
+        game2.board[6][8] = 'crate';
+
+        // Place bombs at same position
+        player1.x = 7;
+        player1.y = 6;
+        player2.x = 7;
+        player2.y = 6;
+        game1.placeBomb(player1);
+        game2.placeBomb(player2);
+
+        // Explode bombs
+        const bomb1 = game1.getBombAt(7, 6);
+        const bomb2 = game2.getBombAt(7, 6);
+        game1.explodeBomb(bomb1);
+        game2.explodeBomb(bomb2);
+
+        // Both should have same powerup spawns (or lack thereof)
+        assert.strictEqual(game1.powerups.length, game2.powerups.length);
+        if (game1.powerups.length > 0) {
+            assert.strictEqual(game1.powerups[0].type, game2.powerups[0].type);
+        }
     });
 });

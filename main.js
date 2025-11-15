@@ -2,31 +2,34 @@ import Game from './game.js';
 import AIController from './ai.js';
 
 class BombermanGame {
-    constructor(options = {}) {
-        // Allow dependency injection for testing
-        this.boardElement = options.boardElement || (typeof document !== 'undefined' ? document.getElementById('game-board') : null);
-        this.bombCountElement = options.bombCountElement || (typeof document !== 'undefined' ? document.getElementById('bomb-count') : null);
-        this.bombPowerElement = options.bombPowerElement || (typeof document !== 'undefined' ? document.getElementById('bomb-power') : null);
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.cellSize = 40;
+        this.game = null;
+        this.player = null;
+        this.aiControllers = [];
+        this.keys = {};
         this.lastTime = 0;
         this.movementTimer = 0;
-        this.keys = {};
-        this.player = null;
-        this.game = null;
-        this.aiControllers = [];
+        this.gameState = 'playing'; // 'playing', 'paused', 'gameover'
 
-        // Only auto-init if we have DOM elements
-        if (this.boardElement && !options.skipInit) {
-            this.init();
-        }
+        this.init();
+        this.setupInput();
+        this.gameLoop(0);
     }
 
     init() {
-        // Create game instance
         this.game = new Game();
+        this.gameState = 'playing';
 
-        // Create human player at starting position (top-left)
+        // Resize canvas to fit board
+        this.canvas.width = this.game.boardWidth * this.cellSize;
+        this.canvas.height = this.game.boardHeight * this.cellSize;
+
+        // Create human player (top-left)
         this.player = this.game.createPlayer(0, 1, 1, true);
-        this.player.name = 'Player';
+        this.player.name = 'You';
         this.player.emoji = '😊';
 
         // Create AI players at other corners
@@ -49,157 +52,242 @@ class BombermanGame {
             new AIController(this.game, 3)
         ];
 
-        // Set up the board grid (if DOM element exists)
-        if (this.boardElement) {
-            this.boardElement.style.gridTemplateColumns = `repeat(${this.game.boardWidth}, 1fr)`;
-        }
-        
-        // Set up input handlers (if in browser)
-        if (typeof document !== 'undefined') {
-            this.setupInput();
-        }
-        
-        // Start game loop (if in browser)
-        if (typeof requestAnimationFrame !== 'undefined') {
-            this.gameLoop(0);
-        }
+        this.movementTimer = 0;
+        this.keys = {};
     }
-    
+
     setupInput() {
         document.addEventListener('keydown', (e) => {
             this.keys[e.key] = true;
-            
-            // Prevent default for arrow keys and space
+
+            // Prevent default for game keys
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
                 e.preventDefault();
             }
+
+            // Handle special keys
+            if (e.key === 'p' || e.key === 'P') {
+                this.togglePause();
+            }
+            if ((e.key === 'r' || e.key === 'R') && this.gameState === 'gameover') {
+                this.restart();
+            }
         });
-        
+
         document.addEventListener('keyup', (e) => {
             this.keys[e.key] = false;
         });
     }
 
-    handleInput(deltaTime) {
-        if (!this.player?.alive) return;
+    togglePause() {
+        if (this.gameState === 'playing') {
+            this.gameState = 'paused';
+        } else if (this.gameState === 'paused') {
+            this.gameState = 'playing';
+        }
+    }
 
-        // Movement (throttled to prevent too fast movement)
+    restart() {
+        this.init();
+    }
+
+    handleInput(deltaTime) {
+        if (this.gameState !== 'playing' || !this.player?.alive) return;
+
+        // Movement (throttled)
         if (this.movementTimer <= 0) {
             let dx = 0, dy = 0;
 
             if (this.keys['ArrowUp']) dy = -1;
-            if (this.keys['ArrowDown']) dy = 1;
-            if (this.keys['ArrowLeft']) dx = -1;
-            if (this.keys['ArrowRight']) dx = 1;
+            else if (this.keys['ArrowDown']) dy = 1;
+            else if (this.keys['ArrowLeft']) dx = -1;
+            else if (this.keys['ArrowRight']) dx = 1;
 
             if (dx !== 0 || dy !== 0) {
                 this.game.movePlayer(this.player, dx, dy);
-                this.movementTimer = 200 / this.player.speed; // Faster movement with higher speed
+                this.movementTimer = 150 / this.player.speed;
             }
         } else {
             this.movementTimer -= deltaTime;
         }
 
-        // Bomb placement (not throttled - should respond immediately)
+        // Bomb placement
         if (this.keys[' '] && !this.keys.spacePressedLastFrame) {
-            if (this.game.placeBomb(this.player)) {
-                this.updateUI();
-            }
+            this.game.placeBomb(this.player);
         }
-
         this.keys.spacePressedLastFrame = this.keys[' '];
     }
 
-    updateUI() {
-        if (this.bombCountElement) {
-            this.bombCountElement.textContent = this.player.maxBombs;
-        }
-        if (this.bombPowerElement) {
-            this.bombPowerElement.textContent = this.player.bombPower;
-        }
-    }
+    checkGameOver() {
+        if (this.gameState !== 'playing') return;
 
-    getCellContent(x, y) {
-        // Check for any player at this position
-        for (const player of this.game.players) {
-            if (player.alive && Math.floor(player.x) === x && Math.floor(player.y) === y) {
-                return { content: player.emoji || '🤖', className: 'cell' };
+        const alivePlayers = this.game.players.filter(p => p.alive);
+
+        if (alivePlayers.length <= 1) {
+            this.gameState = 'gameover';
+            if (alivePlayers.length === 1) {
+                this.game.winner = alivePlayers[0];
+            } else {
+                this.game.winner = null; // Draw
             }
         }
-
-        // Check for explosion at this position
-        if (this.game.explosions.some(e => e.x === x && e.y === y)) {
-            return { content: '💥', className: 'cell' };
-        }
-
-        // Check for powerup at this position
-        const powerup = this.game.powerups.find(p => p.x === x && p.y === y);
-        if (powerup) {
-            const icons = { bomb: '💣', power: '🔥', speed: '👟' };
-            return { content: icons[powerup.type], className: `cell powerup-${powerup.type}` };
-        }
-
-        // Check board cell
-        const cell = this.game.board[y][x];
-        switch (cell) {
-            case 'bomb': return { content: '💣', className: 'cell' };
-            case 'wall': return { content: '🧱', className: 'cell wall' };
-            case 'crate': return { content: '📦', className: 'cell crate' };
-            default: return { content: '', className: 'cell' };
-        }
     }
-    
-    render() {
-        if (!this.boardElement) return; // Skip rendering if no DOM element
-        
-        const { boardWidth, boardHeight } = this.game;
-        let html = '';
-        
-        for (let y = 0; y < boardHeight; y++) {
-            for (let x = 0; x < boardWidth; x++) {
-                const { content, className } = this.getCellContent(x, y);
-                html += `<div class="${className}">${content}</div>`;
-            }
-        }
-        
-        this.boardElement.innerHTML = html;
-    }
-    
-    gameLoop(currentTime) {
-        const deltaTime = currentTime - this.lastTime;
-        this.lastTime = currentTime;
 
-        // Always handle input to maintain proper state tracking
-        this.handleInput(deltaTime);
+    update(deltaTime) {
+        if (this.gameState !== 'playing') return;
 
-        // Update AI controllers
+        // Update AI
         for (const ai of this.aiControllers) {
             ai.update(deltaTime);
         }
 
-        // Update game state (all logic is now in GameState)
+        // Update game logic
         this.game.update(deltaTime);
 
-        // Check if powerups were collected (update UI)
-        if (this.player?.powerups.length > (this.lastPowerupCount || 0)) {
-            this.updateUI();
-            this.lastPowerupCount = this.player.powerups.length;
+        // Check for game over
+        this.checkGameOver();
+    }
+
+    render() {
+        const ctx = this.ctx;
+        const { boardWidth, boardHeight, board, players, bombs, explosions, powerups } = this.game;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw board
+        for (let y = 0; y < boardHeight; y++) {
+            for (let x = 0; x < boardWidth; x++) {
+                const cell = board[y][x];
+                const px = x * this.cellSize;
+                const py = y * this.cellSize;
+
+                // Background
+                ctx.fillStyle = '#444';
+                ctx.fillRect(px, py, this.cellSize, this.cellSize);
+
+                // Cell content
+                ctx.font = '24px serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                if (cell === 'wall') {
+                    ctx.fillStyle = '#666';
+                    ctx.fillRect(px, py, this.cellSize, this.cellSize);
+                    ctx.fillText('🧱', px + this.cellSize/2, py + this.cellSize/2);
+                } else if (cell === 'crate') {
+                    ctx.fillStyle = '#8b4513';
+                    ctx.fillRect(px, py, this.cellSize, this.cellSize);
+                    ctx.fillText('📦', px + this.cellSize/2, py + this.cellSize/2);
+                } else if (cell === 'bomb') {
+                    ctx.fillText('💣', px + this.cellSize/2, py + this.cellSize/2);
+                }
+            }
         }
 
-        // Render
+        // Draw powerups
+        for (const powerup of powerups) {
+            const px = powerup.x * this.cellSize;
+            const py = powerup.y * this.cellSize;
+            const icons = { bomb: '💣', power: '🔥', speed: '👟' };
+            ctx.fillText(icons[powerup.type], px + this.cellSize/2, py + this.cellSize/2);
+        }
+
+        // Draw explosions
+        for (const explosion of explosions) {
+            const px = explosion.x * this.cellSize;
+            const py = explosion.y * this.cellSize;
+            ctx.fillText('💥', px + this.cellSize/2, py + this.cellSize/2);
+        }
+
+        // Draw players
+        for (const player of players) {
+            if (player.alive) {
+                const px = player.x * this.cellSize;
+                const py = player.y * this.cellSize;
+                ctx.fillText(player.emoji, px + this.cellSize/2, py + this.cellSize/2);
+            }
+        }
+
+        // Draw UI overlay
+        this.renderUI();
+    }
+
+    renderUI() {
+        const ctx = this.ctx;
+
+        // Player stats bar at top
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, this.canvas.width, 30);
+
+        ctx.font = '14px monospace';
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+
+        if (this.player) {
+            const status = this.player.alive ? '' : ' (DEAD)';
+            ctx.fillText(
+                `${this.player.emoji} Bombs: ${this.player.maxBombs} | Power: ${this.player.bombPower} | Speed: ${this.player.speed.toFixed(1)}${status}`,
+                10, 15
+            );
+        }
+
+        // Game state overlays
+        if (this.gameState === 'paused') {
+            this.renderOverlay('PAUSED', 'Press P to resume');
+        } else if (this.gameState === 'gameover') {
+            const message = this.game.winner
+                ? `${this.game.winner.emoji} ${this.game.winner.name} wins!`
+                : 'Draw!';
+            this.renderOverlay('GAME OVER', message + '\n\nPress R to restart');
+        }
+    }
+
+    renderOverlay(title, message) {
+        const ctx = this.ctx;
+
+        // Dim background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Title
+        ctx.font = 'bold 48px monospace';
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(title, this.canvas.width/2, this.canvas.height/2 - 40);
+
+        // Message
+        ctx.font = '20px monospace';
+        const lines = message.split('\n');
+        lines.forEach((line, i) => {
+            ctx.fillText(line, this.canvas.width/2, this.canvas.height/2 + 20 + i * 30);
+        });
+    }
+
+    gameLoop(currentTime) {
+        const deltaTime = currentTime - this.lastTime;
+        this.lastTime = currentTime;
+
+        // Cap delta time to prevent huge jumps
+        const cappedDelta = Math.min(deltaTime, 100);
+
+        this.handleInput(cappedDelta);
+        this.update(cappedDelta);
         this.render();
 
-        // Continue loop (if in browser)
-        if (typeof requestAnimationFrame !== 'undefined') {
-            requestAnimationFrame((time) => this.gameLoop(time));
-        }
+        requestAnimationFrame((time) => this.gameLoop(time));
     }
 }
 
-// Start the game when DOM is loaded (only in browser)
+// Start game when DOM is ready
 if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', () => {
-        new BombermanGame();
+        const canvas = document.getElementById('game');
+        if (canvas) {
+            new BombermanGame(canvas);
+        }
     });
 }
 
