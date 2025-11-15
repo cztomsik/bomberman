@@ -14,8 +14,17 @@ class BombermanGame {
         this.movementTimer = 0;
         this.gameState = 'menu'; // 'menu', 'playing', 'paused', 'gameover'
         this.menuSelection = 0;
-        this.menuOptions = ['Start Game', 'Controls'];
+        this.menuOptions = ['Start Game', 'Settings', 'Controls'];
         this.showingControls = false;
+        this.showingSettings = false;
+
+        // Game settings
+        this.settings = {
+            playerCount: 4,  // Total players (1 human + AI)
+            minPlayers: 2,
+            maxPlayers: 8
+        };
+        this.settingsSelection = 0;
 
         // Set initial canvas size for menu
         this.canvas.width = 600;
@@ -26,40 +35,54 @@ class BombermanGame {
     }
 
     init() {
-        this.game = new Game();
+        // Calculate grid size based on player count
+        const gridSize = this.calculateGridSize(this.settings.playerCount);
+        this.game = new Game(gridSize.width, gridSize.height);
         this.gameState = 'playing';
 
         // Resize canvas to fit board
         this.canvas.width = this.game.boardWidth * this.cellSize;
         this.canvas.height = this.game.boardHeight * this.cellSize;
 
-        // Create human player (top-left)
-        this.player = this.game.createPlayer(0, 1, 1, true);
-        this.player.name = 'You';
-        this.player.emoji = '😊';
+        // Define spawn positions (corners and edges for more players)
+        const spawnPositions = this.getSpawnPositions(this.game.boardWidth, this.game.boardHeight, this.settings.playerCount);
 
-        // Create AI players at other corners
-        const ai1 = this.game.createPlayer(1, this.game.boardWidth - 2, 1, false);
-        ai1.name = 'AI 1';
-        ai1.emoji = '🤖';
+        // Player emojis and names
+        const playerEmojis = ['😊', '🤖', '👾', '🎯', '👹', '🤡', '👻', '🎃'];
+        const playerNames = ['You', 'AI 1', 'AI 2', 'AI 3', 'AI 4', 'AI 5', 'AI 6', 'AI 7'];
 
-        const ai2 = this.game.createPlayer(2, 1, this.game.boardHeight - 2, false);
-        ai2.name = 'AI 2';
-        ai2.emoji = '👾';
+        // Create human player
+        this.player = this.game.createPlayer(0, spawnPositions[0].x, spawnPositions[0].y, true);
+        this.player.name = playerNames[0];
+        this.player.emoji = playerEmojis[0];
 
-        const ai3 = this.game.createPlayer(3, this.game.boardWidth - 2, this.game.boardHeight - 2, false);
-        ai3.name = 'AI 3';
-        ai3.emoji = '🎯';
-
-        // Create AI controllers
-        this.aiControllers = [
-            new AIController(this.game, 1),
-            new AIController(this.game, 2),
-            new AIController(this.game, 3)
-        ];
+        // Create AI players
+        this.aiControllers = [];
+        for (let i = 1; i < this.settings.playerCount; i++) {
+            const aiPlayer = this.game.createPlayer(i, spawnPositions[i].x, spawnPositions[i].y, false);
+            aiPlayer.name = playerNames[i];
+            aiPlayer.emoji = playerEmojis[i];
+            this.aiControllers.push(new AIController(this.game, i));
+        }
 
         this.movementTimer = 0;
         this.keys = {};
+    }
+
+    getSpawnPositions(boardWidth, boardHeight, playerCount) {
+        // Define spawn positions - corners first, then edges
+        const positions = [
+            { x: 1, y: 1 },                                    // Top-left
+            { x: boardWidth - 2, y: 1 },                       // Top-right
+            { x: 1, y: boardHeight - 2 },                      // Bottom-left
+            { x: boardWidth - 2, y: boardHeight - 2 },         // Bottom-right
+            { x: Math.floor(boardWidth / 2), y: 1 },           // Top-center
+            { x: Math.floor(boardWidth / 2), y: boardHeight - 2 }, // Bottom-center
+            { x: 1, y: Math.floor(boardHeight / 2) },          // Left-center
+            { x: boardWidth - 2, y: Math.floor(boardHeight / 2) }  // Right-center
+        ];
+
+        return positions.slice(0, playerCount);
     }
 
     setupInput() {
@@ -100,6 +123,11 @@ class BombermanGame {
             return;
         }
 
+        if (this.showingSettings) {
+            this.handleSettingsInput(key);
+            return;
+        }
+
         if (key === 'ArrowUp') {
             this.menuSelection = (this.menuSelection - 1 + this.menuOptions.length) % this.menuOptions.length;
         } else if (key === 'ArrowDown') {
@@ -109,10 +137,31 @@ class BombermanGame {
         }
     }
 
+    handleSettingsInput(key) {
+        if (key === 'Escape') {
+            this.showingSettings = false;
+            return;
+        }
+
+        if (key === 'ArrowLeft') {
+            if (this.settings.playerCount > this.settings.minPlayers) {
+                this.settings.playerCount--;
+            }
+        } else if (key === 'ArrowRight') {
+            if (this.settings.playerCount < this.settings.maxPlayers) {
+                this.settings.playerCount++;
+            }
+        } else if (key === 'Enter' || key === ' ') {
+            this.showingSettings = false;
+        }
+    }
+
     selectMenuOption() {
         const option = this.menuOptions[this.menuSelection];
         if (option === 'Start Game') {
             this.init();
+        } else if (option === 'Settings') {
+            this.showingSettings = true;
         } else if (option === 'Controls') {
             this.showingControls = true;
         }
@@ -336,6 +385,11 @@ class BombermanGame {
             return;
         }
 
+        if (this.showingSettings) {
+            this.renderSettingsScreen();
+            return;
+        }
+
         // Menu options
         ctx.font = '24px monospace';
         const startY = 220;
@@ -392,6 +446,57 @@ class BombermanGame {
         ctx.font = '16px monospace';
         ctx.fillStyle = '#888';
         ctx.fillText('Press Enter or Escape to go back', this.canvas.width/2, 440);
+    }
+
+    renderSettingsScreen() {
+        const ctx = this.ctx;
+
+        // Settings title
+        ctx.font = 'bold 36px monospace';
+        ctx.fillStyle = '#ff6600';
+        ctx.fillText('SETTINGS', this.canvas.width/2, 200);
+
+        // Player count setting
+        ctx.font = '20px monospace';
+        ctx.fillStyle = 'white';
+        ctx.fillText('Number of Players:', this.canvas.width/2, 280);
+
+        // Player count selector with arrows
+        ctx.font = '24px monospace';
+        ctx.fillStyle = '#ff6600';
+        const leftArrow = this.settings.playerCount > this.settings.minPlayers ? '◀' : ' ';
+        const rightArrow = this.settings.playerCount < this.settings.maxPlayers ? '▶' : ' ';
+        ctx.fillText(`${leftArrow}  ${this.settings.playerCount}  ${rightArrow}`, this.canvas.width/2, 320);
+
+        // Grid size info
+        const gridSize = this.calculateGridSize(this.settings.playerCount);
+        ctx.font = '16px monospace';
+        ctx.fillStyle = '#888';
+        ctx.fillText(`Grid Size: ${gridSize.width}x${gridSize.height}`, this.canvas.width/2, 370);
+        ctx.fillText(`(1 Human + ${this.settings.playerCount - 1} AI)`, this.canvas.width/2, 400);
+
+        // Instructions
+        ctx.fillText('Use Left/Right arrows to adjust', this.canvas.width/2, 450);
+        ctx.fillText('Press Enter or Escape to go back', this.canvas.width/2, 480);
+    }
+
+    calculateGridSize(playerCount) {
+        // Base size for 2 players, increase proportionally
+        // Classic Bomberman uses 15x13, good for 4 players
+        // Scale based on player count
+        const baseWidth = 11;  // Minimum for 2 players
+        const baseHeight = 11;
+
+        // Add 2 cells in each dimension per additional player (keep odd for wall pattern)
+        const extraPlayers = playerCount - 2;
+        const width = baseWidth + Math.floor(extraPlayers * 2);
+        const height = baseHeight + Math.floor(extraPlayers * 1);
+
+        // Ensure odd dimensions for proper wall grid pattern
+        const finalWidth = width % 2 === 0 ? width + 1 : width;
+        const finalHeight = height % 2 === 0 ? height + 1 : height;
+
+        return { width: finalWidth, height: finalHeight };
     }
 
     gameLoop(currentTime) {
