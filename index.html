@@ -10,75 +10,36 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             background: #222;
             color: white;
             font-family: monospace;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
         }
-        
-        #game-container {
-            background: #333;
-            padding: 20px;
-            border-radius: 10px;
-        }
-        
-        #game-board {
-            display: grid;
-            gap: 1px;
+
+        canvas {
             background: #111;
-            padding: 5px;
-        }
-        
-        .cell {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            background: #444;
-        }
-        
-        .cell.wall {
-            background: #666;
-        }
-        
-        .cell.crate {
-            background: #8b4513;
+            border-radius: 5px;
         }
 
-        .cell.powerup-bomb {
-            background: radial-gradient(circle, #ff6b6b, #444);
-        }
-
-        .cell.powerup-power {
-            background: radial-gradient(circle, #ff9f40, #444);
-        }
-
-        .cell.powerup-speed {
-            background: radial-gradient(circle, #4ecdc4, #444);
-        }
-        
         .info {
             margin-top: 10px;
             padding: 10px;
-            background: #222;
+            background: #333;
             border-radius: 5px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <div id="game-container">
-        <div id="game-board"></div>
-        <div class="info">
-            <p>Use arrow keys to move, Space to place bomb</p>
-            <p>Bombs: <span id="bomb-count">1</span> | Power: <span id="bomb-power">1</span></p>
-        </div>
+    <canvas id="game"></canvas>
+    <div class="info">
+        <p>Arrow keys: Move | Space: Bomb | P: Pause | R: Restart</p>
     </div>
     <script type="module" src="main.js"></script>
 </body>
