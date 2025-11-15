@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze Runner</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #2c3e50;
+            font-family: Arial, sans-serif;
+        }
+
+        h1 {
+            color: #ecf0f1;
+            margin-bottom: 20px;
+        }
+
+        canvas {
+            border: 2px solid #ecf0f1;
+            background-color: #34495e;
+        }
+
+        .controls {
+            margin-top: 20px;
+            color: #ecf0f1;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 5px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Maze Runner</h1>
+    <canvas id="mazeCanvas"></canvas>
+    <div class="controls">
+        <button onclick="generateNewMaze()">Generate New Maze</button>
+        <button onclick="toggleSolution()">Show Solution</button>
+        <button id="executeBtn" onclick="executePath()">Execute Path</button>
+    </div>
+
+    <script>
+        // Configuration
+        const ROWS = 20;
+        const COLS = 20;
+        const CELL_SIZE = 25;
+
+        const canvas = document.getElementById('mazeCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = COLS * CELL_SIZE;
+        canvas.height = ROWS * CELL_SIZE;
+
+        // Maze cell structure
+        class Cell {
+            constructor(row, col) {
+                this.row = row;
+                this.col = col;
+                this.walls = {
+                    top: true,
+                    right: true,
+                    bottom: true,
+                    left: true
+                };
+                this.visited = false;
+            }
+        }
+
+        // Create maze grid
+        let maze = [];
+
+        // Player object
+        let player = {
+            row: 0,
+            col: 0
+        };
+
+        // Goal position
+        let goal = {
+            row: ROWS - 1,
+            col: COLS - 1
+        };
+
+        // Solution path
+        let solutionPath = [];
+        let showSolution = false;
+
+        // Animation state
+        let isAnimating = false;
+        let animationTimeout = null;
+
+        function initializeMaze() {
+            maze = [];
+            for (let row = 0; row < ROWS; row++) {
+                maze[row] = [];
+                for (let col = 0; col < COLS; col++) {
+                    maze[row][col] = new Cell(row, col);
+                }
+            }
+        }
+
+        // Get unvisited neighbors
+        function getUnvisitedNeighbors(cell) {
+            const neighbors = [];
+            const { row, col } = cell;
+
+            // Top
+            if (row > 0 && !maze[row - 1][col].visited) {
+                neighbors.push({ cell: maze[row - 1][col], direction: 'top' });
+            }
+            // Right
+            if (col < COLS - 1 && !maze[row][col + 1].visited) {
+                neighbors.push({ cell: maze[row][col + 1], direction: 'right' });
+            }
+            // Bottom
+            if (row < ROWS - 1 && !maze[row + 1][col].visited) {
+                neighbors.push({ cell: maze[row + 1][col], direction: 'bottom' });
+            }
+            // Left
+            if (col > 0 && !maze[row][col - 1].visited) {
+                neighbors.push({ cell: maze[row][col - 1], direction: 'left' });
+            }
+
+            return neighbors;
+        }
+
+        // Remove wall between two cells
+        function removeWall(current, next, direction) {
+            if (direction === 'top') {
+                current.walls.top = false;
+                next.walls.bottom = false;
+            } else if (direction === 'right') {
+                current.walls.right = false;
+                next.walls.left = false;
+            } else if (direction === 'bottom') {
+                current.walls.bottom = false;
+                next.walls.top = false;
+            } else if (direction === 'left') {
+                current.walls.left = false;
+                next.walls.right = false;
+            }
+        }
+
+        // Recursive backtracking algorithm
+        function generateMaze(cell) {
+            cell.visited = true;
+
+            const neighbors = getUnvisitedNeighbors(cell);
+
+            // Shuffle neighbors for randomness
+            for (let i = neighbors.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [neighbors[i], neighbors[j]] = [neighbors[j], neighbors[i]];
+            }
+
+            for (const neighbor of neighbors) {
+                if (!neighbor.cell.visited) {
+                    removeWall(cell, neighbor.cell, neighbor.direction);
+                    generateMaze(neighbor.cell);
+                }
+            }
+        }
+
+        // Draw the maze
+        function drawMaze() {
+            ctx.fillStyle = '#34495e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = '#ecf0f1';
+            ctx.lineWidth = 2;
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    const cell = maze[row][col];
+                    const x = col * CELL_SIZE;
+                    const y = row * CELL_SIZE;
+
+                    ctx.beginPath();
+
+                    // Draw walls
+                    if (cell.walls.top) {
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x + CELL_SIZE, y);
+                    }
+                    if (cell.walls.right) {
+                        ctx.moveTo(x + CELL_SIZE, y);
+                        ctx.lineTo(x + CELL_SIZE, y + CELL_SIZE);
+                    }
+                    if (cell.walls.bottom) {
+                        ctx.moveTo(x, y + CELL_SIZE);
+                        ctx.lineTo(x + CELL_SIZE, y + CELL_SIZE);
+                    }
+                    if (cell.walls.left) {
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x, y + CELL_SIZE);
+                    }
+
+                    ctx.stroke();
+                }
+            }
+
+            // Draw solution path if enabled
+            if (showSolution) {
+                drawSolutionPath();
+            }
+
+            // Draw goal
+            drawGoal();
+
+            // Draw player
+            drawPlayer();
+        }
+
+        // Draw player
+        function drawPlayer() {
+            const x = player.col * CELL_SIZE;
+            const y = player.row * CELL_SIZE;
+            const padding = 4;
+
+            ctx.fillStyle = '#3498db';
+            ctx.beginPath();
+            ctx.arc(
+                x + CELL_SIZE / 2,
+                y + CELL_SIZE / 2,
+                CELL_SIZE / 2 - padding,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
+
+        // Draw goal
+        function drawGoal() {
+            const x = goal.col * CELL_SIZE;
+            const y = goal.row * CELL_SIZE;
+            const padding = 4;
+
+            ctx.fillStyle = '#2ecc71';
+            ctx.fillRect(
+                x + padding,
+                y + padding,
+                CELL_SIZE - padding * 2,
+                CELL_SIZE - padding * 2
+            );
+        }
+
+        // Draw solution path
+        function drawSolutionPath() {
+            if (solutionPath.length === 0) return;
+
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            ctx.beginPath();
+            for (let i = 0; i < solutionPath.length; i++) {
+                const cell = solutionPath[i];
+                const x = cell.col * CELL_SIZE + CELL_SIZE / 2;
+                const y = cell.row * CELL_SIZE + CELL_SIZE / 2;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+        }
+
+        // Find path using backtracking (DFS)
+        function findPath() {
+            // Reset visited flags
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    maze[row][col].visited = false;
+                }
+            }
+
+            const path = [];
+            const startCell = maze[player.row][player.col];
+
+            if (backtrackPath(startCell, path)) {
+                return path;
+            }
+            return [];
+        }
+
+        // Backtracking algorithm to find path
+        function backtrackPath(cell, path) {
+            // Add current cell to path
+            path.push(cell);
+            cell.visited = true;
+
+            // Check if we reached the goal
+            if (cell.row === goal.row && cell.col === goal.col) {
+                return true;
+            }
+
+            // Try all four directions
+            const directions = [
+                { dir: 'top', row: cell.row - 1, col: cell.col },
+                { dir: 'right', row: cell.row, col: cell.col + 1 },
+                { dir: 'bottom', row: cell.row + 1, col: cell.col },
+                { dir: 'left', row: cell.row, col: cell.col - 1 }
+            ];
+
+            for (const direction of directions) {
+                const { dir, row, col } = direction;
+
+                // Check if we can move in this direction
+                if (
+                    row >= 0 && row < ROWS &&
+                    col >= 0 && col < COLS &&
+                    !cell.walls[dir] &&
+                    !maze[row][col].visited
+                ) {
+                    if (backtrackPath(maze[row][col], path)) {
+                        return true;
+                    }
+                }
+            }
+
+            // Backtrack - remove current cell from path
+            path.pop();
+            return false;
+        }
+
+        // Toggle solution visibility
+        function toggleSolution() {
+            showSolution = !showSolution;
+
+            if (showSolution) {
+                solutionPath = findPath();
+            }
+
+            drawMaze();
+        }
+
+        // Execute path animation
+        function executePath() {
+            if (isAnimating) return;
+
+            // Calculate path if not already showing solution
+            if (!showSolution || solutionPath.length === 0) {
+                solutionPath = findPath();
+                if (solutionPath.length === 0) {
+                    alert('No path found!');
+                    return;
+                }
+            }
+
+            isAnimating = true;
+            document.getElementById('executeBtn').disabled = true;
+
+            // Start from index 1 (skip current position)
+            let currentStep = 1;
+
+            function animateStep() {
+                if (currentStep >= solutionPath.length) {
+                    // Animation complete
+                    isAnimating = false;
+                    document.getElementById('executeBtn').disabled = false;
+
+                    // Check if reached goal
+                    if (player.row === goal.row && player.col === goal.col) {
+                        setTimeout(() => {
+                            alert('Congratulations! You solved the maze!');
+                            generateNewMaze();
+                        }, 100);
+                    }
+                    return;
+                }
+
+                // Move to next cell
+                const nextCell = solutionPath[currentStep];
+                player.row = nextCell.row;
+                player.col = nextCell.col;
+
+                drawMaze();
+                currentStep++;
+
+                // Schedule next step
+                animationTimeout = setTimeout(animateStep, 50);
+            }
+
+            animateStep();
+        }
+
+        // Check if player can move in a direction
+        function canMove(direction) {
+            const currentCell = maze[player.row][player.col];
+            return !currentCell.walls[direction];
+        }
+
+        // Move player
+        function movePlayer(direction) {
+            if (!canMove(direction)) return;
+
+            switch (direction) {
+                case 'top':
+                    player.row--;
+                    break;
+                case 'bottom':
+                    player.row++;
+                    break;
+                case 'left':
+                    player.col--;
+                    break;
+                case 'right':
+                    player.col++;
+                    break;
+            }
+
+            // Update solution path if showing
+            if (showSolution) {
+                solutionPath = findPath();
+            }
+
+            drawMaze();
+
+            // Check if player reached the goal
+            if (player.row === goal.row && player.col === goal.col) {
+                setTimeout(() => {
+                    alert('Congratulations! You solved the maze!');
+                    generateNewMaze();
+                }, 100);
+            }
+        }
+
+        // Handle keyboard input
+        document.addEventListener('keydown', (e) => {
+            // Disable keyboard during animation
+            if (isAnimating) return;
+
+            switch (e.key) {
+                case 'ArrowUp':
+                    e.preventDefault();
+                    movePlayer('top');
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    movePlayer('bottom');
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    movePlayer('left');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    movePlayer('right');
+                    break;
+            }
+        });
+
+        // Generate new maze
+        function generateNewMaze() {
+            // Clear any ongoing animation
+            if (animationTimeout) {
+                clearTimeout(animationTimeout);
+                animationTimeout = null;
+            }
+            isAnimating = false;
+            document.getElementById('executeBtn').disabled = false;
+
+            initializeMaze();
+            generateMaze(maze[0][0]);
+            player.row = 0;
+            player.col = 0;
+            showSolution = false;
+            solutionPath = [];
+            drawMaze();
+        }
+
+        // Initialize on load
+        generateNewMaze();
+    </script>
+</body>
+</html>
