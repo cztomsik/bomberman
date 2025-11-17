@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebOS Desktop</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Boot Screen -->
+    <div class="boot-screen" id="bootScreen">
+        <div class="boot-logo">🍎</div>
+        <div class="boot-progress">
+            <div class="boot-progress-bar"></div>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-container">
+            <div class="login-avatar">👤</div>
+            <div class="login-username">User</div>
+            <input type="password" class="login-password" placeholder="Enter password" id="loginPassword">
+            <button class="login-button" id="loginButton">Login</button>
+            <div class="login-hint">Hint: Press Enter or click Login (any password works)</div>
+        </div>
+    </div>
+
+    <!-- Lock Screen -->
+    <div class="lock-screen" id="lockScreen">
+        <div class="lock-time">12:00</div>
+        <div class="lock-date">Monday, January 1</div>
+        <div class="lock-hint">Click to unlock</div>
+    </div>
+
+    <!-- Menu Bar -->
+    <div class="menu-bar" id="menuBar">
+        <div class="menu-left">
+            <div class="menu-item apple-menu">🍎</div>
+            <div class="menu-item">File</div>
+            <div class="menu-item">Edit</div>
+            <div class="menu-item">View</div>
+            <div class="menu-item">Window</div>
+            <div class="menu-item">Help</div>
+        </div>
+        <div class="menu-right">
+            <div class="menu-item" id="spotlightBtn" title="Spotlight Search">🔍</div>
+            <div class="menu-item" id="notificationBtn" title="Notifications">🔔</div>
+            <div class="menu-item">🔋</div>
+            <div class="menu-item">📶</div>
+            <div class="menu-item" id="clock">12:00</div>
+        </div>
+    </div>
+
+    <!-- Desktop -->
+    <div class="desktop" id="desktop">
+        <!-- Desktop Icons -->
+        <div class="desktop-icons">
+            <div class="desktop-icon" data-app="finder">
+                <div class="desktop-icon-image">💾</div>
+                <div class="desktop-icon-label">Hard Drive</div>
+            </div>
+            <div class="desktop-icon" data-app="notes">
+                <div class="desktop-icon-image">📄</div>
+                <div class="desktop-icon-label">Document</div>
+            </div>
+            <div class="desktop-icon" data-app="photos">
+                <div class="desktop-icon-image">🖼️</div>
+                <div class="desktop-icon-label">Pictures</div>
+            </div>
+        </div>
+        <!-- Windows will be dynamically added here -->
+    </div>
+
+    <!-- Spotlight Search -->
+    <div class="spotlight" id="spotlight">
+        <div class="spotlight-container">
+            <input type="text" class="spotlight-input" placeholder="Spotlight Search" id="spotlightInput">
+            <div class="spotlight-results" id="spotlightResults"></div>
+        </div>
+    </div>
+
+    <!-- Notification Center -->
+    <div class="notification-center" id="notificationCenter">
+        <div class="notification-header">Notifications</div>
+        <div class="notification-list">
+            <div class="notification-item">
+                <div class="notification-icon">📧</div>
+                <div class="notification-content">
+                    <div class="notification-title">Mail</div>
+                    <div class="notification-text">You have 3 new messages</div>
+                </div>
+            </div>
+            <div class="notification-item">
+                <div class="notification-icon">📅</div>
+                <div class="notification-content">
+                    <div class="notification-title">Calendar</div>
+                    <div class="notification-text">Meeting in 30 minutes</div>
+                </div>
+            </div>
+            <div class="notification-item">
+                <div class="notification-icon">⬇️</div>
+                <div class="notification-content">
+                    <div class="notification-title">Downloads</div>
+                    <div class="notification-text">document.pdf downloaded</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dock -->
+    <div class="dock" id="dock">
+        <div class="dock-item" data-app="finder" title="Finder">
+            <span class="dock-icon">📁</span>
+        </div>
+        <div class="dock-item" data-app="photos" title="Photos">
+            <span class="dock-icon">🖼️</span>
+        </div>
+        <div class="dock-item" data-app="mail" title="Mail">
+            <span class="dock-icon">📧</span>
+        </div>
+        <div class="dock-item" data-app="calendar" title="Calendar">
+            <span class="dock-icon">📅</span>
+        </div>
+        <div class="dock-item" data-app="music" title="Music">
+            <span class="dock-icon">🎵</span>
+        </div>
+        <div class="dock-item" data-app="messages" title="Messages">
+            <span class="dock-icon">💬</span>
+        </div>
+        <div class="dock-item" data-app="weather" title="Weather">
+            <span class="dock-icon">🌤️</span>
+        </div>
+        <div class="dock-item" data-app="notes" title="Notes">
+            <span class="dock-icon">📝</span>
+        </div>
+        <div class="dock-item" data-app="calculator" title="Calculator">
+            <span class="dock-icon">🔢</span>
+        </div>
+        <div class="dock-item" data-app="browser" title="Browser">
+            <span class="dock-icon">🌐</span>
+        </div>
+        <div class="dock-item" data-app="terminal" title="Terminal">
+            <span class="dock-icon">💻</span>
+        </div>
+        <div class="dock-item" data-app="appstore" title="App Store">
+            <span class="dock-icon">🛍️</span>
+        </div>
+        <div class="dock-separator"></div>
+        <div class="dock-item" data-app="settings" title="Settings">
+            <span class="dock-icon">⚙️</span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arkanoid - Emoji Edition</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <header>
+            <h1>🧱 Arkanoid 🧱</h1>
+            <div class="game-info">
+                <div class="score">Score: <span id="score">0</span></div>
+                <div class="lives">Lives: <span id="lives">3</span></div>
+                <div class="level">Level: <span id="level">1</span></div>
+            </div>
+        </header>
+
+        <div class="canvas-container">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+            <div id="gameMessage" class="game-message hidden">
+                <h2 id="messageTitle">Get Ready!</h2>
+                <p id="messageText">Use arrow keys or mouse to move paddle</p>
+                <button id="startButton">Start Game</button>
+            </div>
+        </div>
+
+        <footer>
+            <div class="controls">
+                <p>🎮 Controls: ← → Arrow Keys or Mouse | Space: Pause | Enter: Start/Restart</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

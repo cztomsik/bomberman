@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game - Regl</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+        }
+        .game-container {
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #fff;
+            background-color: #111;
+        }
+        .score {
+            color: #fff;
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        .game-over {
+            color: #ff4444;
+            font-size: 32px;
+            margin: 20px 0;
+        }
+        .instructions {
+            color: #fff;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="score">Score: <span id="score">0</span></div>
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        <div class="game-over" id="gameOver" style="display: none;">Game Over! Press Space to restart</div>
+        <div class="instructions">Use arrow keys to move • Space to restart</div>
+    </div>
+
+    <script src="https://unpkg.com/regl@2.1.0/dist/regl.js"></script>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const scoreElement = document.getElementById('score');
+        const gameOverElement = document.getElementById('gameOver');
+        
+        const regl = createREGL({
+            canvas: canvas,
+            attributes: {
+                antialias: false,
+                depth: false,
+                stencil: false,
+                alpha: false
+            }
+        });
+
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
+
+        let snake = [{x: 10, y: 10}];
+        let food = {};
+        let poisonFood = null;
+        let dx = 0;
+        let dy = 0;
+        let score = 0;
+        let gameRunning = true;
+        let lastUpdate = Date.now();
+        const updateInterval = 150;
+        let shakeAmount = 0;
+        let shakeDecay = 0.95;
+        let blinkAmount = 0;
+        let blinkDecay = 0.85;
+
+        const drawRect = regl({
+            vert: `
+                attribute vec2 position;
+                uniform vec2 offset;
+                uniform vec2 scale;
+                uniform vec2 resolution;
+                uniform vec2 shake;
+                void main() {
+                    vec2 pos = (position * scale + offset) / resolution * 2.0 - 1.0;
+                    pos.y = -pos.y;
+                    pos += shake;
+                    gl_Position = vec4(pos, 0, 1);
+                }
+            `,
+            frag: `
+                precision mediump float;
+                uniform vec3 color;
+                void main() {
+                    gl_FragColor = vec4(color, 1.0);
+                }
+            `,
+            attributes: {
+                position: [
+                    [0, 0],
+                    [1, 0],
+                    [1, 1],
+                    [0, 0],
+                    [1, 1],
+                    [0, 1]
+                ]
+            },
+            uniforms: {
+                offset: regl.prop('offset'),
+                scale: regl.prop('scale'),
+                color: regl.prop('color'),
+                resolution: [canvas.width, canvas.height],
+                shake: regl.prop('shake')
+            },
+            count: 6
+        });
+
+        function generateFood() {
+            let newFood;
+            do {
+                newFood = {
+                    x: Math.floor(Math.random() * tileCount),
+                    y: Math.floor(Math.random() * tileCount)
+                };
+            } while (snake.some(segment => segment.x === newFood.x && segment.y === newFood.y) ||
+                     (poisonFood && poisonFood.x === newFood.x && poisonFood.y === newFood.y));
+            food = newFood;
+        }
+        
+        function generatePoisonFood() {
+            if (Math.random() < 0.3) { // 30% chance to spawn poison food
+                let newPoison;
+                do {
+                    newPoison = {
+                        x: Math.floor(Math.random() * tileCount),
+                        y: Math.floor(Math.random() * tileCount)
+                    };
+                } while (snake.some(segment => segment.x === newPoison.x && segment.y === newPoison.y) ||
+                         (food.x === newPoison.x && food.y === newPoison.y));
+                poisonFood = newPoison;
+            } else {
+                poisonFood = null;
+            }
+        }
+
+        function update() {
+            if (!gameRunning || (dx === 0 && dy === 0)) return;
+
+            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+
+            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                gameOver();
+                return;
+            }
+
+            for (let segment of snake) {
+                if (head.x === segment.x && head.y === segment.y) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            snake.unshift(head);
+
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                scoreElement.textContent = score;
+                generateFood();
+                generatePoisonFood();
+                blinkAmount = 1.0;
+            } else if (poisonFood && head.x === poisonFood.x && head.y === poisonFood.y) {
+                score = Math.max(0, score - 2);
+                scoreElement.textContent = score;
+                poisonFood = null;
+                shakeAmount = 0.15;
+                if (snake.length > 1) {
+                    snake.pop();
+                    snake.pop();
+                }
+            } else {
+                snake.pop();
+            }
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            gameOverElement.style.display = 'block';
+        }
+
+        function resetGame() {
+            snake = [{x: 10, y: 10}];
+            dx = 0;
+            dy = 0;
+            score = 0;
+            scoreElement.textContent = score;
+            gameRunning = true;
+            gameOverElement.style.display = 'none';
+            poisonFood = null;
+            shakeAmount = 0;
+            blinkAmount = 0;
+            generateFood();
+        }
+
+        function changeDirection(event) {
+            if (!gameRunning) return;
+
+            const keyPressed = event.keyCode;
+            const goingUp = dy === -1;
+            const goingDown = dy === 1;
+            const goingRight = dx === 1;
+            const goingLeft = dx === -1;
+
+            if (keyPressed === 37 && !goingRight) {
+                dx = -1;
+                dy = 0;
+            }
+            if (keyPressed === 38 && !goingDown) {
+                dx = 0;
+                dy = -1;
+            }
+            if (keyPressed === 39 && !goingLeft) {
+                dx = 1;
+                dy = 0;
+            }
+            if (keyPressed === 40 && !goingUp) {
+                dx = 0;
+                dy = 1;
+            }
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.keyCode === 32) {
+                event.preventDefault();
+                if (!gameRunning) {
+                    resetGame();
+                }
+            } else {
+                changeDirection(event);
+            }
+        });
+
+        function render() {
+            const now = Date.now();
+            if (now - lastUpdate > updateInterval) {
+                update();
+                lastUpdate = now;
+            }
+
+            regl.clear({
+                color: [0.067, 0.067, 0.067, 1]
+            });
+
+            const drawCalls = [];
+            
+            let shakeX = 0;
+            let shakeY = 0;
+            
+            if (shakeAmount > 0.001) {
+                shakeAmount *= shakeDecay;
+                shakeX = (Math.random() - 0.5) * shakeAmount * 2;
+                shakeY = (Math.random() - 0.5) * shakeAmount * 2;
+            }
+            
+            if (blinkAmount > 0.01) {
+                blinkAmount *= blinkDecay;
+            }
+            
+            const blinkIntensity = Math.sin(Date.now() * 0.05) * 0.5 + 0.5;
+            const snakeBrightness = blinkAmount > 0.01 ? (blinkIntensity * blinkAmount * 2.0) : 1.0;
+
+            for (let segment of snake) {
+                drawCalls.push({
+                    offset: [segment.x * gridSize + 1, segment.y * gridSize + 1],
+                    scale: [gridSize - 2, gridSize - 2],
+                    color: [0, snakeBrightness, 0],
+                    shake: [shakeX, shakeY]
+                });
+            }
+
+            drawCalls.push({
+                offset: [food.x * gridSize + 1, food.y * gridSize + 1],
+                scale: [gridSize - 2, gridSize - 2],
+                color: [1, 0, 0],
+                shake: [shakeX, shakeY]
+            });
+            
+            if (poisonFood) {
+                const pulse = Math.sin(Date.now() * 0.005) * 0.3 + 0.7;
+                drawCalls.push({
+                    offset: [poisonFood.x * gridSize + 1, poisonFood.y * gridSize + 1],
+                    scale: [gridSize - 2, gridSize - 2],
+                    color: [pulse, 0, pulse],
+                    shake: [shakeX, shakeY]
+                });
+            }
+
+            drawRect(drawCalls);
+
+            requestAnimationFrame(render);
+        }
+
+        generateFood();
+        render();
+    </script>
+</body>
+</html>

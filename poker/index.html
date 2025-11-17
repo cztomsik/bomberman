@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poker Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0f5132, #198754);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #game-container {
+            background: #1a5f3a;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 90%;
+            border: 3px solid #ffd700;
+        }
+
+        h1 {
+            text-align: center;
+            color: #ffd700;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .player-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+
+        .ai-area {
+            border: 2px solid #dc3545;
+        }
+
+        .human-area {
+            border: 2px solid #28a745;
+        }
+
+        .player-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .player-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .chip-count {
+            font-size: 1.1em;
+            color: #ffd700;
+        }
+
+        .cards-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .card {
+            width: 60px;
+            height: 84px;
+            background: white;
+            color: black;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px;
+            font-weight: bold;
+            font-size: 12px;
+            box-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+            border: 1px solid #ccc;
+        }
+
+        .card.back {
+            background: linear-gradient(45deg, #1e3a8a, #3b82f6);
+            color: white;
+            justify-content: center;
+        }
+
+        .card.red {
+            color: #dc2626;
+        }
+
+        .card.black {
+            color: #1f2937;
+        }
+
+        .card-rank {
+            font-size: 14px;
+        }
+
+        .card-suit {
+            font-size: 18px;
+        }
+
+        #community-area {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        #community-cards {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        #community-area h3 {
+            color: #ffd700;
+            margin-bottom: 15px;
+        }
+
+        #game-info {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        #pot-amount {
+            font-size: 1.5em;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        #game-status {
+            font-size: 1.1em;
+            margin: 15px 0;
+            min-height: 30px;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 5px;
+        }
+
+        #controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .action-btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 100px;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #fold-btn {
+            background: #dc3545;
+            color: white;
+        }
+
+        #call-btn {
+            background: #ffc107;
+            color: black;
+        }
+
+        #raise-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        #new-game-btn {
+            background: #6f42c1;
+            color: white;
+            margin-top: 20px;
+        }
+
+        .empty-card {
+            width: 60px;
+            height: 84px;
+            border: 2px dashed #666;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 12px;
+        }
+
+        @media (max-width: 768px) {
+            #game-container {
+                padding: 20px;
+                width: 95%;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .player-area {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            #controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .action-btn {
+                width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>🃏 Poker Game 🃏</h1>
+
+        <div class="player-area ai-area">
+            <div class="player-info">
+                <div class="player-name">🤖 AI Player</div>
+                <div class="chip-count">Chips: $<span id="ai-chips">1000</span></div>
+            </div>
+            <div class="cards-container" id="ai-cards">
+                <div class="card back">🂠</div>
+                <div class="card back">🂠</div>
+            </div>
+        </div>
+
+        <div id="community-area">
+            <h3>Community Cards</h3>
+            <div id="community-cards">
+                <div class="empty-card">?</div>
+                <div class="empty-card">?</div>
+                <div class="empty-card">?</div>
+                <div class="empty-card">?</div>
+                <div class="empty-card">?</div>
+            </div>
+        </div>
+
+        <div class="player-area human-area">
+            <div class="player-info">
+                <div class="player-name">👤 You</div>
+                <div class="chip-count">Chips: $<span id="player-chips">1000</span></div>
+            </div>
+            <div class="cards-container" id="player-cards">
+                <div class="empty-card">?</div>
+                <div class="empty-card">?</div>
+            </div>
+        </div>
+
+        <div id="game-info">
+            <div id="pot-amount">Pot: $<span id="pot-value">0</span></div>
+            <div id="game-status">Click "New Game" to start playing!</div>
+        </div>
+
+        <div id="controls">
+            <button class="action-btn" id="fold-btn" onclick="playerAction('fold')" disabled>Fold</button>
+            <button class="action-btn" id="call-btn" onclick="playerAction('call')" disabled>Call</button>
+            <button class="action-btn" id="raise-btn" onclick="playerAction('raise')" disabled>Raise $50</button>
+            <button class="action-btn" id="new-game-btn" onclick="startNewGame()">New Game</button>
+        </div>
+    </div>
+
+    <script>
+        class Card {
+            constructor(suit, rank) {
+                this.suit = suit;
+                this.rank = rank;
+                this.value = this.getValue();
+            }
+
+            getValue() {
+                if (this.rank === 'A') return 14;
+                if (this.rank === 'K') return 13;
+                if (this.rank === 'Q') return 12;
+                if (this.rank === 'J') return 11;
+                return parseInt(this.rank);
+            }
+
+            toString() {
+                const suits = { '♠': 'spades', '♥': 'hearts', '♦': 'diamonds', '♣': 'clubs' };
+                return `${this.rank}${this.suit}`;
+            }
+
+            getSuitSymbol() {
+                return this.suit;
+            }
+
+            isRed() {
+                return this.suit === '♥' || this.suit === '♦';
+            }
+        }
+
+        class Deck {
+            constructor() {
+                this.cards = [];
+                this.initializeDeck();
+                this.shuffle();
+            }
+
+            initializeDeck() {
+                const suits = ['♠', '♥', '♦', '♣'];
+                const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+
+                for (let suit of suits) {
+                    for (let rank of ranks) {
+                        this.cards.push(new Card(suit, rank));
+                    }
+                }
+            }
+
+            shuffle() {
+                for (let i = this.cards.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
+                }
+            }
+
+            deal() {
+                return this.cards.pop();
+            }
+        }
+
+        class Player {
+            constructor(name, chips) {
+                this.name = name;
+                this.chips = chips;
+                this.hand = [];
+                this.currentBet = 0;
+                this.folded = false;
+            }
+
+            addCard(card) {
+                this.hand.push(card);
+            }
+
+            bet(amount) {
+                const betAmount = Math.min(amount, this.chips);
+                this.chips -= betAmount;
+                this.currentBet += betAmount;
+                return betAmount;
+            }
+
+            fold() {
+                this.folded = true;
+            }
+
+            reset() {
+                this.hand = [];
+                this.currentBet = 0;
+                this.folded = false;
+            }
+        }
+
+        class HandEvaluator {
+            static evaluateHand(cards) {
+                if (cards.length < 5) return { rank: 0, description: 'Invalid hand' };
+
+                const allCombinations = this.getCombinations(cards, 5);
+                let bestHand = { rank: 0, highCards: [] };
+
+                for (let combo of allCombinations) {
+                    const evaluation = this.evaluateFiveCards(combo);
+                    if (evaluation.rank > bestHand.rank ||
+                        (evaluation.rank === bestHand.rank && this.compareHighCards(evaluation.highCards, bestHand.highCards) > 0)) {
+                        bestHand = evaluation;
+                    }
+                }
+
+                return bestHand;
+            }
+
+            static getCombinations(arr, k) {
+                if (k === 0) return [[]];
+                if (arr.length === 0) return [];
+
+                const first = arr[0];
+                const rest = arr.slice(1);
+
+                const withFirst = this.getCombinations(rest, k - 1).map(combo => [first, ...combo]);
+                const withoutFirst = this.getCombinations(rest, k);
+
+                return [...withFirst, ...withoutFirst];
+            }
+
+            static evaluateFiveCards(cards) {
+                const sortedCards = cards.sort((a, b) => b.value - a.value);
+                const ranks = sortedCards.map(card => card.value);
+                const suits = sortedCards.map(card => card.suit);
+
+                const rankCounts = {};
+                ranks.forEach(rank => rankCounts[rank] = (rankCounts[rank] || 0) + 1);
+                const counts = Object.values(rankCounts).sort((a, b) => b - a);
+
+                const isFlush = suits.every(suit => suit === suits[0]);
+                const isStraight = this.isStraight(ranks);
+
+                if (isFlush && isStraight && ranks[0] === 14) {
+                    return { rank: 10, description: 'Royal Flush', highCards: [14] };
+                }
+                if (isFlush && isStraight) {
+                    return { rank: 9, description: 'Straight Flush', highCards: [ranks[0]] };
+                }
+                if (counts[0] === 4) {
+                    const fourKind = Object.keys(rankCounts).find(rank => rankCounts[rank] === 4);
+                    const kicker = Object.keys(rankCounts).find(rank => rankCounts[rank] === 1);
+                    return { rank: 8, description: 'Four of a Kind', highCards: [parseInt(fourKind), parseInt(kicker)] };
+                }
+                if (counts[0] === 3 && counts[1] === 2) {
+                    const triple = Object.keys(rankCounts).find(rank => rankCounts[rank] === 3);
+                    const pair = Object.keys(rankCounts).find(rank => rankCounts[rank] === 2);
+                    return { rank: 7, description: 'Full House', highCards: [parseInt(triple), parseInt(pair)] };
+                }
+                if (isFlush) {
+                    return { rank: 6, description: 'Flush', highCards: ranks };
+                }
+                if (isStraight) {
+                    return { rank: 5, description: 'Straight', highCards: [ranks[0]] };
+                }
+                if (counts[0] === 3) {
+                    const triple = Object.keys(rankCounts).find(rank => rankCounts[rank] === 3);
+                    const kickers = Object.keys(rankCounts).filter(rank => rankCounts[rank] === 1).map(rank => parseInt(rank)).sort((a, b) => b - a);
+                    return { rank: 4, description: 'Three of a Kind', highCards: [parseInt(triple), ...kickers] };
+                }
+                if (counts[0] === 2 && counts[1] === 2) {
+                    const pairs = Object.keys(rankCounts).filter(rank => rankCounts[rank] === 2).map(rank => parseInt(rank)).sort((a, b) => b - a);
+                    const kicker = Object.keys(rankCounts).find(rank => rankCounts[rank] === 1);
+                    return { rank: 3, description: 'Two Pair', highCards: [...pairs, parseInt(kicker)] };
+                }
+                if (counts[0] === 2) {
+                    const pair = Object.keys(rankCounts).find(rank => rankCounts[rank] === 2);
+                    const kickers = Object.keys(rankCounts).filter(rank => rankCounts[rank] === 1).map(rank => parseInt(rank)).sort((a, b) => b - a);
+                    return { rank: 2, description: 'One Pair', highCards: [parseInt(pair), ...kickers] };
+                }
+
+                return { rank: 1, description: 'High Card', highCards: ranks };
+            }
+
+            static isStraight(ranks) {
+                const uniqueRanks = [...new Set(ranks)].sort((a, b) => b - a);
+                if (uniqueRanks.length !== 5) return false;
+
+                // Check for A-2-3-4-5 straight (wheel)
+                if (uniqueRanks[0] === 14 && uniqueRanks[4] === 2) {
+                    return uniqueRanks[1] === 5 && uniqueRanks[2] === 4 && uniqueRanks[3] === 3;
+                }
+
+                // Check for normal straight
+                for (let i = 0; i < 4; i++) {
+                    if (uniqueRanks[i] - uniqueRanks[i + 1] !== 1) return false;
+                }
+                return true;
+            }
+
+            static compareHighCards(cards1, cards2) {
+                for (let i = 0; i < Math.min(cards1.length, cards2.length); i++) {
+                    if (cards1[i] > cards2[i]) return 1;
+                    if (cards1[i] < cards2[i]) return -1;
+                }
+                return 0;
+            }
+        }
+
+        class PokerGame {
+            constructor() {
+                this.deck = new Deck();
+                this.player = new Player('Player', 1000);
+                this.ai = new Player('AI', 1000);
+                this.communityCards = [];
+                this.pot = 0;
+                this.currentBet = 0;
+                this.gamePhase = 'waiting'; // waiting, preflop, flop, turn, river, showdown
+                this.playerTurn = true;
+            }
+
+            startNewGame() {
+                this.deck = new Deck();
+                this.player.reset();
+                this.ai.reset();
+                this.communityCards = [];
+                this.pot = 0;
+                this.currentBet = 50; // Small blind
+                this.gamePhase = 'preflop';
+                this.playerTurn = true;
+
+                // Deal hole cards
+                for (let i = 0; i < 2; i++) {
+                    this.player.addCard(this.deck.deal());
+                    this.ai.addCard(this.deck.deal());
+                }
+
+                // Post blinds
+                this.pot += this.player.bet(25); // Small blind
+                this.pot += this.ai.bet(50); // Big blind
+                this.currentBet = 50;
+
+                this.updateDisplay();
+                this.updateGameStatus('Your turn! You can call $25, raise, or fold.');
+                this.enableControls(true);
+            }
+
+            playerAction(action) {
+                if (!this.playerTurn || this.player.folded) return;
+
+                switch (action) {
+                    case 'fold':
+                        this.player.fold();
+                        this.endHand('AI wins! You folded.');
+                        break;
+                    case 'call':
+                        const callAmount = this.currentBet - this.player.currentBet;
+                        this.pot += this.player.bet(callAmount);
+                        this.playerTurn = false;
+                        this.nextPhase();
+                        break;
+                    case 'raise':
+                        const raiseAmount = Math.max(50, this.currentBet - this.player.currentBet + 50);
+                        this.pot += this.player.bet(raiseAmount);
+                        this.currentBet = this.player.currentBet;
+                        this.playerTurn = false;
+                        this.aiAction();
+                        break;
+                }
+                this.updateDisplay();
+            }
+
+            aiAction() {
+                if (this.ai.folded) return;
+
+                const handStrength = this.evaluateAIHand();
+                const callAmount = this.currentBet - this.ai.currentBet;
+
+                if (handStrength < 0.3 && callAmount > 100) {
+                    this.ai.fold();
+                    this.endHand('You win! AI folded.');
+                    return;
+                }
+
+                if (handStrength > 0.7 && Math.random() > 0.5) {
+                    // AI raises
+                    const raiseAmount = callAmount + 50;
+                    this.pot += this.ai.bet(raiseAmount);
+                    this.currentBet = this.ai.currentBet;
+                    this.updateGameStatus(`AI raises to $${this.currentBet}! Your turn.`);
+                    this.playerTurn = true;
+                    this.enableControls(true);
+                } else {
+                    // AI calls
+                    this.pot += this.ai.bet(callAmount);
+                    this.updateGameStatus('AI calls.');
+                    setTimeout(() => this.nextPhase(), 1000);
+                }
+            }
+
+            evaluateAIHand() {
+                const allCards = [...this.ai.hand, ...this.communityCards];
+                if (allCards.length < 2) return 0.5; // Default for preflop
+
+                const evaluation = HandEvaluator.evaluateHand(allCards);
+                return Math.min(1, evaluation.rank / 10);
+            }
+
+            nextPhase() {
+                this.player.currentBet = 0;
+                this.ai.currentBet = 0;
+                this.currentBet = 0;
+
+                switch (this.gamePhase) {
+                    case 'preflop':
+                        this.gamePhase = 'flop';
+                        for (let i = 0; i < 3; i++) {
+                            this.communityCards.push(this.deck.deal());
+                        }
+                        this.updateGameStatus('Flop dealt! Your turn.');
+                        break;
+                    case 'flop':
+                        this.gamePhase = 'turn';
+                        this.communityCards.push(this.deck.deal());
+                        this.updateGameStatus('Turn dealt! Your turn.');
+                        break;
+                    case 'turn':
+                        this.gamePhase = 'river';
+                        this.communityCards.push(this.deck.deal());
+                        this.updateGameStatus('River dealt! Your turn.');
+                        break;
+                    case 'river':
+                        this.gamePhase = 'showdown';
+                        this.showdown();
+                        return;
+                }
+
+                this.playerTurn = true;
+                this.enableControls(true);
+                this.updateDisplay();
+            }
+
+            showdown() {
+                const playerHand = HandEvaluator.evaluateHand([...this.player.hand, ...this.communityCards]);
+                const aiHand = HandEvaluator.evaluateHand([...this.ai.hand, ...this.communityCards]);
+
+                let winner;
+                if (playerHand.rank > aiHand.rank) {
+                    winner = 'player';
+                } else if (aiHand.rank > playerHand.rank) {
+                    winner = 'ai';
+                } else {
+                    const comparison = HandEvaluator.compareHighCards(playerHand.highCards, aiHand.highCards);
+                    if (comparison > 0) winner = 'player';
+                    else if (comparison < 0) winner = 'ai';
+                    else winner = 'tie';
+                }
+
+                let message;
+                if (winner === 'player') {
+                    this.player.chips += this.pot;
+                    message = `You win with ${playerHand.description}! +$${this.pot}`;
+                } else if (winner === 'ai') {
+                    this.ai.chips += this.pot;
+                    message = `AI wins with ${aiHand.description}! -$${this.pot}`;
+                } else {
+                    this.player.chips += Math.floor(this.pot / 2);
+                    this.ai.chips += Math.floor(this.pot / 2);
+                    message = `It's a tie! Both have ${playerHand.description}`;
+                }
+
+                this.showAICards();
+                this.endHand(message);
+            }
+
+            endHand(message) {
+                this.updateGameStatus(message);
+                this.enableControls(false);
+                this.pot = 0;
+                this.gamePhase = 'waiting';
+                this.updateDisplay();
+
+                if (this.player.chips <= 0) {
+                    this.updateGameStatus('Game Over! You ran out of chips.');
+                } else if (this.ai.chips <= 0) {
+                    this.updateGameStatus('Congratulations! You beat the AI!');
+                }
+            }
+
+            showAICards() {
+                const aiCardsContainer = document.getElementById('ai-cards');
+                aiCardsContainer.innerHTML = '';
+
+                this.ai.hand.forEach(card => {
+                    const cardElement = this.createCardElement(card);
+                    aiCardsContainer.appendChild(cardElement);
+                });
+            }
+
+            createCardElement(card) {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = `card ${card.isRed() ? 'red' : 'black'}`;
+
+                cardDiv.innerHTML = `
+                    <div class="card-rank">${card.rank}</div>
+                    <div class="card-suit">${card.suit}</div>
+                    <div class="card-rank" style="transform: rotate(180deg);">${card.rank}</div>
+                `;
+
+                return cardDiv;
+            }
+
+            updateDisplay() {
+                // Update chip counts
+                document.getElementById('player-chips').textContent = this.player.chips;
+                document.getElementById('ai-chips').textContent = this.ai.chips;
+                document.getElementById('pot-value').textContent = this.pot;
+
+                // Update player cards
+                const playerCardsContainer = document.getElementById('player-cards');
+                playerCardsContainer.innerHTML = '';
+
+                if (this.player.hand.length > 0) {
+                    this.player.hand.forEach(card => {
+                        const cardElement = this.createCardElement(card);
+                        playerCardsContainer.appendChild(cardElement);
+                    });
+                } else {
+                    playerCardsContainer.innerHTML = '<div class="empty-card">?</div><div class="empty-card">?</div>';
+                }
+
+                // Update community cards
+                const communityCardsContainer = document.getElementById('community-cards');
+                communityCardsContainer.innerHTML = '';
+
+                for (let i = 0; i < 5; i++) {
+                    if (i < this.communityCards.length) {
+                        const cardElement = this.createCardElement(this.communityCards[i]);
+                        communityCardsContainer.appendChild(cardElement);
+                    } else {
+                        const emptyCard = document.createElement('div');
+                        emptyCard.className = 'empty-card';
+                        emptyCard.textContent = '?';
+                        communityCardsContainer.appendChild(emptyCard);
+                    }
+                }
+
+                // Update button text
+                const callAmount = this.currentBet - this.player.currentBet;
+                document.getElementById('call-btn').textContent = callAmount > 0 ? `Call $${callAmount}` : 'Check';
+            }
+
+            updateGameStatus(message) {
+                document.getElementById('game-status').textContent = message;
+            }
+
+            enableControls(enabled) {
+                document.getElementById('fold-btn').disabled = !enabled;
+                document.getElementById('call-btn').disabled = !enabled;
+                document.getElementById('raise-btn').disabled = !enabled || this.player.chips < 50;
+            }
+        }
+
+        // Global game instance
+        let game = new PokerGame();
+
+        function startNewGame() {
+            game.startNewGame();
+        }
+
+        function playerAction(action) {
+            game.playerAction(action);
+        }
+
+        // Initialize display
+        game.updateDisplay();
+    </script>
+</body>
+</html>
