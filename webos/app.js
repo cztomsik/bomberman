@@ -73,15 +73,18 @@ const apps = {
         title: '📁 Finder',
         content: `
             <div class="finder-content">
-                <div class="finder-item">📄 Documents</div>
-                <div class="finder-item">🖼️ Pictures</div>
-                <div class="finder-item">🎵 Music</div>
-                <div class="finder-item">🎬 Videos</div>
-                <div class="finder-item">⬇️ Downloads</div>
+                <div class="finder-toolbar">
+                    <button class="finder-btn finder-back">◀ Back</button>
+                    <button class="finder-btn finder-home">🏠 Home</button>
+                    <button class="finder-btn finder-new-folder">📁 New Folder</button>
+                    <button class="finder-btn finder-new-file">📄 New File</button>
+                </div>
+                <div class="finder-path">/ Home</div>
+                <div class="finder-items"></div>
             </div>
         `,
-        width: 400,
-        height: 400
+        width: 500,
+        height: 450
     },
     photos: {
         title: '🖼️ Photos',
@@ -213,15 +216,29 @@ const apps = {
     },
     notes: {
         title: '📝 Notes',
-        content: '<div class="notes-content"><textarea placeholder="Start typing..."></textarea></div>',
-        width: 500,
-        height: 400
+        content: `
+            <div class="notes-content">
+                <div class="notes-toolbar">
+                    <input type="text" class="notes-filename" placeholder="Untitled" value="Untitled">
+                    <button class="notes-btn notes-save">💾 Save</button>
+                    <button class="notes-btn notes-new">📄 New</button>
+                    <button class="notes-btn notes-export">⬇️ Export</button>
+                    <select class="notes-list">
+                        <option value="">-- Load File --</option>
+                    </select>
+                </div>
+                <textarea class="notes-textarea" placeholder="Start typing..."></textarea>
+            </div>
+        `,
+        width: 600,
+        height: 450
     },
     calculator: {
         title: '🔢 Calculator',
         content: `
             <div class="calculator-content">
                 <div class="calculator-display">0</div>
+                <button class="calculator-button clear">C</button>
                 <button class="calculator-button">7</button>
                 <button class="calculator-button">8</button>
                 <button class="calculator-button">9</button>
@@ -248,28 +265,43 @@ const apps = {
         content: `
             <div class="browser-content">
                 <div class="browser-bar">
-                    <input type="text" placeholder="Search or enter website..." value="https://example.com">
+                    <button class="browser-nav-btn" data-action="back">◀</button>
+                    <button class="browser-nav-btn" data-action="forward">▶</button>
+                    <button class="browser-nav-btn" data-action="refresh">🔄</button>
+                    <input type="text" class="browser-url" placeholder="Search or enter website..." value="https://www.wikipedia.org">
+                    <button class="browser-nav-btn browser-go">Go</button>
+                </div>
+                <div class="browser-bookmarks">
+                    <a href="#" class="bookmark" data-url="https://www.google.com">Google</a>
+                    <a href="#" class="bookmark" data-url="https://www.wikipedia.org">Wikipedia</a>
+                    <a href="#" class="bookmark" data-url="https://news.ycombinator.com">Hacker News</a>
+                    <a href="#" class="bookmark" data-url="https://github.com">GitHub</a>
                 </div>
                 <div class="browser-frame">
-                    <h2>Welcome to WebOS Browser</h2>
-                    <p>This is a simple browser window. In a real implementation, you would load web content here.</p>
+                    <iframe src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
                 </div>
             </div>
         `,
-        width: 700,
-        height: 500
+        width: 800,
+        height: 600
     },
     terminal: {
         title: '💻 Terminal',
         content: `
             <div class="terminal-content">
-                <div>WebOS Terminal v1.0</div>
-                <div>Type 'help' for available commands</div>
-                <div style="margin-top: 10px;">$ <span style="animation: blink 1s infinite;">_</span></div>
+                <div class="terminal-output">
+                    <div>WebOS Terminal v1.0</div>
+                    <div>Type 'help' for available commands</div>
+                    <div>&nbsp;</div>
+                </div>
+                <div class="terminal-input-line">
+                    <span class="terminal-prompt">user@webos:~$</span>
+                    <input type="text" class="terminal-input" autofocus spellcheck="false">
+                </div>
             </div>
         `,
-        width: 600,
-        height: 400
+        width: 700,
+        height: 450
     },
     appstore: {
         title: '🛍️ App Store',
@@ -395,6 +427,26 @@ function createWindow(appName) {
         setupCalculator(window);
     }
 
+    // Setup browser if it's the browser app
+    if (appName === 'browser') {
+        setupBrowser(window);
+    }
+
+    // Setup terminal if it's the terminal app
+    if (appName === 'terminal') {
+        setupTerminal(window);
+    }
+
+    // Setup notes if it's the notes app
+    if (appName === 'notes') {
+        setupNotes(window);
+    }
+
+    // Setup finder if it's the finder app
+    if (appName === 'finder') {
+        setupFinder(window);
+    }
+
     // Bring window to front on click
     window.addEventListener('mousedown', () => {
         bringToFront(windowId);
@@ -504,12 +556,18 @@ function setupCalculator(window) {
         button.addEventListener('click', () => {
             const value = button.textContent;
 
-            if (value >= '0' && value <= '9' || value === '.') {
+            if (value === 'C') {
+                currentValue = '0';
+                previousValue = '';
+                operation = '';
+                shouldResetDisplay = false;
+                display.textContent = '0';
+            } else if (value >= '0' && value <= '9' || value === '.') {
                 if (shouldResetDisplay) {
                     currentValue = value;
                     shouldResetDisplay = false;
                 } else {
-                    currentValue = currentValue === '0' ? value : currentValue + value;
+                    currentValue = currentValue === '0' && value !== '.' ? value : currentValue + value;
                 }
                 display.textContent = currentValue;
             } else if (value === '=') {
@@ -541,9 +599,392 @@ function calculate(a, b, op) {
         case '+': return (numA + numB).toString();
         case '-': return (numA - numB).toString();
         case '*': return (numA * numB).toString();
-        case '/': return (numA / numB).toString();
+        case '/': return numB !== 0 ? (numA / numB).toString() : 'Error';
         default: return b;
     }
+}
+
+// Browser functionality
+function setupBrowser(windowEl) {
+    const urlInput = windowEl.querySelector('.browser-url');
+    const iframe = windowEl.querySelector('iframe');
+    const goBtn = windowEl.querySelector('.browser-go');
+    const navBtns = windowEl.querySelectorAll('.browser-nav-btn[data-action]');
+    const bookmarks = windowEl.querySelectorAll('.bookmark');
+
+    function navigateTo(url) {
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            url = 'https://' + url;
+        }
+        urlInput.value = url;
+        iframe.src = url;
+    }
+
+    goBtn.addEventListener('click', () => {
+        navigateTo(urlInput.value);
+    });
+
+    urlInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            navigateTo(urlInput.value);
+        }
+    });
+
+    navBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const action = btn.dataset.action;
+            if (action === 'back') {
+                try { iframe.contentWindow.history.back(); } catch(e) {}
+            } else if (action === 'forward') {
+                try { iframe.contentWindow.history.forward(); } catch(e) {}
+            } else if (action === 'refresh') {
+                iframe.src = iframe.src;
+            }
+        });
+    });
+
+    bookmarks.forEach(bookmark => {
+        bookmark.addEventListener('click', (e) => {
+            e.preventDefault();
+            const url = bookmark.dataset.url;
+            navigateTo(url);
+        });
+    });
+
+    // Load initial page
+    navigateTo(urlInput.value);
+}
+
+// Terminal functionality
+function setupTerminal(windowEl) {
+    const output = windowEl.querySelector('.terminal-output');
+    const input = windowEl.querySelector('.terminal-input');
+    const commandHistory = [];
+    let historyIndex = -1;
+
+    const commands = {
+        help: () => `Available commands:
+  help     - Show this help message
+  clear    - Clear the terminal
+  ls       - List files in current directory
+  pwd      - Print working directory
+  whoami   - Display current user
+  date     - Show current date and time
+  echo     - Print text to terminal
+  cat      - Display file contents
+  mkdir    - Create a directory
+  touch    - Create a file
+  calc     - Simple calculator (e.g., calc 2+2)
+  uname    - System information
+  uptime   - System uptime`,
+        clear: () => {
+            output.innerHTML = '';
+            return '';
+        },
+        ls: () => `Documents/  Pictures/  Music/  Videos/  Downloads/
+Desktop/    Projects/  .config/`,
+        pwd: () => '/home/user',
+        whoami: () => 'user',
+        date: () => new Date().toString(),
+        echo: (args) => args.join(' '),
+        cat: (args) => {
+            if (!args.length) return 'cat: missing file operand';
+            const files = {
+                'readme.txt': 'Welcome to WebOS Terminal!\nThis is a simulated terminal environment.',
+                '.bashrc': '# WebOS bash configuration\nexport PATH=$PATH:/usr/local/bin\nalias ll="ls -la"',
+                'notes.txt': 'Remember to check the browser and calculator apps!'
+            };
+            return files[args[0]] || `cat: ${args[0]}: No such file or directory`;
+        },
+        mkdir: (args) => args.length ? `Created directory: ${args[0]}` : 'mkdir: missing operand',
+        touch: (args) => args.length ? `Created file: ${args[0]}` : 'touch: missing file operand',
+        calc: (args) => {
+            if (!args.length) return 'Usage: calc <expression>';
+            try {
+                const expr = args.join('').replace(/[^0-9+\-*/().]/g, '');
+                return eval(expr).toString();
+            } catch(e) {
+                return 'Error: Invalid expression';
+            }
+        },
+        uname: () => 'WebOS 1.0.0 x86_64',
+        uptime: () => {
+            const mins = Math.floor((Date.now() - window.bootTime) / 60000);
+            return `up ${mins} minutes`;
+        }
+    };
+
+    window.bootTime = window.bootTime || Date.now();
+
+    function addOutput(text, isCommand = false) {
+        const line = document.createElement('div');
+        if (isCommand) {
+            line.innerHTML = `<span style="color: #00ff00;">user@webos:~$</span> ${text}`;
+        } else {
+            line.textContent = text;
+        }
+        output.appendChild(line);
+        output.scrollTop = output.scrollHeight;
+    }
+
+    function processCommand(cmd) {
+        const parts = cmd.trim().split(' ');
+        const command = parts[0].toLowerCase();
+        const args = parts.slice(1);
+
+        if (!command) return;
+
+        commandHistory.push(cmd);
+        historyIndex = commandHistory.length;
+
+        addOutput(cmd, true);
+
+        if (commands[command]) {
+            const result = commands[command](args);
+            if (result) {
+                result.split('\n').forEach(line => addOutput(line));
+            }
+        } else if (command) {
+            addOutput(`${command}: command not found`);
+        }
+    }
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            processCommand(input.value);
+            input.value = '';
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (historyIndex > 0) {
+                historyIndex--;
+                input.value = commandHistory[historyIndex];
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (historyIndex < commandHistory.length - 1) {
+                historyIndex++;
+                input.value = commandHistory[historyIndex];
+            } else {
+                historyIndex = commandHistory.length;
+                input.value = '';
+            }
+        }
+    });
+
+    input.focus();
+}
+
+// Notes functionality
+function setupNotes(windowEl) {
+    const textarea = windowEl.querySelector('.notes-textarea');
+    const filenameInput = windowEl.querySelector('.notes-filename');
+    const saveBtn = windowEl.querySelector('.notes-save');
+    const newBtn = windowEl.querySelector('.notes-new');
+    const exportBtn = windowEl.querySelector('.notes-export');
+    const fileList = windowEl.querySelector('.notes-list');
+
+    function updateFileList() {
+        const files = JSON.parse(localStorage.getItem('webos_notes') || '{}');
+        fileList.innerHTML = '<option value="">-- Load File --</option>';
+        Object.keys(files).forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            fileList.appendChild(option);
+        });
+    }
+
+    saveBtn.addEventListener('click', () => {
+        const filename = filenameInput.value.trim() || 'Untitled';
+        const content = textarea.value;
+        const files = JSON.parse(localStorage.getItem('webos_notes') || '{}');
+        files[filename] = content;
+        localStorage.setItem('webos_notes', JSON.stringify(files));
+        filenameInput.value = filename;
+        updateFileList();
+        alert(`File "${filename}" saved!`);
+    });
+
+    newBtn.addEventListener('click', () => {
+        filenameInput.value = 'Untitled';
+        textarea.value = '';
+    });
+
+    exportBtn.addEventListener('click', () => {
+        const filename = filenameInput.value.trim() || 'Untitled';
+        const content = textarea.value;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename + '.txt';
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    fileList.addEventListener('change', () => {
+        const filename = fileList.value;
+        if (filename) {
+            const files = JSON.parse(localStorage.getItem('webos_notes') || '{}');
+            if (files[filename]) {
+                filenameInput.value = filename;
+                textarea.value = files[filename];
+            }
+        }
+    });
+
+    updateFileList();
+}
+
+// Finder functionality with virtual file system
+function setupFinder(windowEl) {
+    const pathDisplay = windowEl.querySelector('.finder-path');
+    const itemsContainer = windowEl.querySelector('.finder-items');
+    const backBtn = windowEl.querySelector('.finder-back');
+    const homeBtn = windowEl.querySelector('.finder-home');
+    const newFolderBtn = windowEl.querySelector('.finder-new-folder');
+    const newFileBtn = windowEl.querySelector('.finder-new-file');
+
+    // Initialize virtual file system
+    if (!window.virtualFS) {
+        window.virtualFS = {
+            'Home': {
+                type: 'folder',
+                children: {
+                    'Documents': {
+                        type: 'folder',
+                        children: {
+                            'readme.txt': { type: 'file', content: 'Welcome to WebOS!' },
+                            'notes.txt': { type: 'file', content: 'My important notes...' }
+                        }
+                    },
+                    'Pictures': {
+                        type: 'folder',
+                        children: {
+                            'vacation.jpg': { type: 'file', content: '[Image: Beach sunset]' },
+                            'family.png': { type: 'file', content: '[Image: Family photo]' }
+                        }
+                    },
+                    'Music': {
+                        type: 'folder',
+                        children: {
+                            'song.mp3': { type: 'file', content: '[Audio: Favorite song]' }
+                        }
+                    },
+                    'Videos': {
+                        type: 'folder',
+                        children: {}
+                    },
+                    'Downloads': {
+                        type: 'folder',
+                        children: {
+                            'installer.dmg': { type: 'file', content: '[Installer package]' }
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+    let currentPath = ['Home'];
+
+    function getCurrentFolder() {
+        let folder = window.virtualFS;
+        for (const part of currentPath) {
+            folder = folder[part].children || folder[part];
+        }
+        return folder;
+    }
+
+    function renderItems() {
+        const folder = getCurrentFolder();
+        itemsContainer.innerHTML = '';
+        pathDisplay.textContent = '/ ' + currentPath.join(' / ');
+
+        const items = Object.entries(folder).sort((a, b) => {
+            if (a[1].type === 'folder' && b[1].type !== 'folder') return -1;
+            if (a[1].type !== 'folder' && b[1].type === 'folder') return 1;
+            return a[0].localeCompare(b[0]);
+        });
+
+        items.forEach(([name, item]) => {
+            const el = document.createElement('div');
+            el.className = 'finder-item';
+            const icon = item.type === 'folder' ? '📁' : getFileIcon(name);
+            el.innerHTML = `${icon} ${name}`;
+
+            if (item.type === 'folder') {
+                el.addEventListener('dblclick', () => {
+                    currentPath.push(name);
+                    renderItems();
+                });
+            } else {
+                el.addEventListener('dblclick', () => {
+                    alert(`File: ${name}\n\nContent:\n${item.content}`);
+                });
+            }
+
+            el.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                if (confirm(`Delete "${name}"?`)) {
+                    delete folder[name];
+                    renderItems();
+                }
+            });
+
+            itemsContainer.appendChild(el);
+        });
+
+        if (items.length === 0) {
+            itemsContainer.innerHTML = '<div class="finder-empty">Folder is empty</div>';
+        }
+    }
+
+    function getFileIcon(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        const icons = {
+            'txt': '📄', 'md': '📄', 'doc': '📄',
+            'jpg': '🖼️', 'png': '🖼️', 'gif': '🖼️', 'jpeg': '🖼️',
+            'mp3': '🎵', 'wav': '🎵', 'flac': '🎵',
+            'mp4': '🎬', 'mov': '🎬', 'avi': '🎬',
+            'pdf': '📕', 'zip': '📦', 'dmg': '💿',
+            'js': '📜', 'html': '🌐', 'css': '🎨'
+        };
+        return icons[ext] || '📄';
+    }
+
+    backBtn.addEventListener('click', () => {
+        if (currentPath.length > 1) {
+            currentPath.pop();
+            renderItems();
+        }
+    });
+
+    homeBtn.addEventListener('click', () => {
+        currentPath = ['Home'];
+        renderItems();
+    });
+
+    newFolderBtn.addEventListener('click', () => {
+        const name = prompt('Enter folder name:');
+        if (name && name.trim()) {
+            const folder = getCurrentFolder();
+            folder[name.trim()] = { type: 'folder', children: {} };
+            renderItems();
+        }
+    });
+
+    newFileBtn.addEventListener('click', () => {
+        const name = prompt('Enter file name:');
+        if (name && name.trim()) {
+            const content = prompt('Enter file content:') || '';
+            const folder = getCurrentFolder();
+            folder[name.trim()] = { type: 'file', content: content };
+            renderItems();
+        }
+    });
+
+    renderItems();
 }
 
 // Spotlight search
